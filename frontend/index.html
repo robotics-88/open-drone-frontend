@@ -45,13 +45,14 @@
     </select>
     <button onclick="runMission()">Run</button>
     <span id="statusText">Status: unknown</span>
+    <button onclick="recenter()">Recenter</button>
   </div>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
   <script>
-    const apiHost = window.location.origin.replace(":8000", "") + ":8000";
+    const apiHost = "http://localhost:8888";
     let map = L.map('map').setView([37.422, -122.084], 17);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles © Esri'
@@ -86,10 +87,11 @@
 
     let droneMarker = L.marker([37.422, -122.084], { icon: DroneIcon }).addTo(map);
 
-
     let setpointMarker = null;
     let polygonLayer = null;
+
     let drawing = false;
+    let followDrone = true;
 
     // Leaflet draw setup
     const drawnItems = new L.FeatureGroup();
@@ -148,6 +150,9 @@
         drawing = false;
     });
 
+    map.on("movestart", () => {
+      followDrone = false;
+    });
 
     map.on('click', function (e) {
         if (drawing) return;
@@ -188,9 +193,21 @@
       }
     }
 
+    function recenter() {
+      followDrone = true;
+
+      if (droneMarker) {
+        const pos = droneMarker.getLatLng();
+        map.panTo([pos.lat, pos.lng]);
+      }
+    }
+
     function updateDroneMarker(data) {
         droneMarker.setLatLng([data.lat, data.lon]);
-        map.panTo([data.lat, data.lon]);
+        if (followDrone) {
+          map.panTo([data.lat, data.lon]);
+        }
+
         document.getElementById("statusText").textContent = `Status: ${data.status}`;
 
         const arrowImg = document.getElementById("drone-arrow");
@@ -200,7 +217,7 @@
     }
 
 
-    const ws = new WebSocket(`ws://${location.hostname}:8000/ws`);
+    const ws = new WebSocket(`ws://${location.hostname}:8888/ws`);
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       updateDroneMarker(data);
