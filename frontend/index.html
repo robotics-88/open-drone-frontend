@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Drone Mission Control</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    #controls {
+      padding: 10px;
+      background: #f9f9f9;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    #map {
+      height: 90vh;
+    }
+    select, button {
+      font-size: 16px;
+      padding: 6px 10px;
+      margin-right: 10px;
+    }
+    .rotating-drone {
+        width: 40px;
+        height: 40px;
+        transform-origin: center center;
+        transition: transform 0.2s linear;
+        display: block;
+        pointer-events: none;
+        image-rendering: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <select id="missionSelect">
+      <option value="">-- Select Mission --</option>
+      <option value="takeoff">Takeoff</option>
+      <option value="setpoint">Send Setpoint</option>
+      <option value="lawnmower">Lawnmower</option>
+    </select>
+    <button onclick="runMission()">Run</button>
+    <span id="statusText">Status: unknown</span>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+  <script>
+    const apiHost = window.location.origin.replace(":8000", "") + ":8000";
+    let map = L.map('map').setView([37.422, -122.084], 17);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri'
+    }).addTo(map);
+
+    // Load capabilities from the drone
+    const missionSelect = document.getElementById("missionSelect");
+    async function loadCapabilities() {
+        const res = await fetch(`${apiHost}/capabilities`);
+        const data = await res.json();
+
+        // Clear existing options
+        missionSelect.innerHTML = '<option value="">-- Select Mission --</option>';
+
+        data.missions.forEach(m => {
+            const option = document.createElement("option");
+            option.value = m;
+            option.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+            missionSelect.appendChild(option);
+        });
+    }
+
+    loadCapabilities();
+
+
+    // Set up custom icon with image
+    let DroneIcon = L.divIcon({
+        className: '', // prevent Leaflet from adding styles
+        iconSize: [40, 40],
+        html: '<img id="drone-arrow" src="arrow-bluev2.png" class="rotating-drone">'
+    });
+
+    let droneMarker = L.marker([37.422, -122.084], { icon: DroneIcon }).addTo(map);
+
+
+    let setpointMarker = null;
+    let polygonLayer = null;
+    let drawing = false;
+
+    // Leaflet draw setup
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    const drawControl = new L.Control.Draw({
+      draw: {
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        circlemarker: false,
+        marker: false,
+        polygon: {
+          allowIntersection: false,
+          showArea: true
+        }
+      },
+      edit: {
+        featureGroup: drawnItems
+      }
+    });
+    map.addControl(drawControl);
+
+    map.on('draw:created', function (e) {
+    const layer = e.layer;
+    if (e.layerType === 'polygon') {
+        if (polygonLayer) {
+        drawnItems.removeLayer(polygonLayer);
+        }
+        polygonLayer = layer;
+        drawnItems.addLayer(layer);
+    }
+    });
+
+    map.on('draw:drawstart', function () {
+        drawing = true;
+    });
+
+    map.on('draw:drawstop', function () {
+        drawing = false;
+    });
+
+    map.on('draw:editstart', function () {
+        drawing = true;
+    });
+
+    map.on('draw:editstop', function () {
+        drawing = false;
+    });
+
+    map.on('draw:deletestart', function () {
+        drawing = true;
+    });
+
+    map.on('draw:deletestop', function () {
+        drawing = false;
+    });
+
+
+    map.on('click', function (e) {
+        if (drawing) return;
+
+        if (setpointMarker) {
+            map.removeLayer(setpointMarker);
+        }
+        setpointMarker = L.marker(e.latlng).addTo(map);
+    });
+
+    async function runMission() {
+      const mission = document.getElementById("missionSelect").value;
+      if (mission === "takeoff") {
+        await fetch(`${apiHost}/takeoff`, { method: "POST" });
+      } else if (mission === "setpoint") {
+        if (!setpointMarker) {
+          alert("Click on the map to set a target point first.");
+          return;
+        }
+        const { lat, lng } = setpointMarker.getLatLng();
+        const sp = { lat: lat, lon: lng, alt: 12.0 };
+        await fetch(`${apiHost}/setpoint`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(sp)
+        });
+      } else if (mission === "lawnmower") {
+        if (!polygonLayer) {
+          alert("Draw a polygon on the map first.");
+          return;
+        }
+        const latlngs = polygonLayer.getLatLngs()[0].map(coord => [coord.lat, coord.lng]);
+        await fetch(`${apiHost}/lawnmower`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ polygon: latlngs })
+        });
+      }
+    }
+
+    function updateDroneMarker(data) {
+        droneMarker.setLatLng([data.lat, data.lon]);
+        map.panTo([data.lat, data.lon]);
+        document.getElementById("statusText").textContent = `Status: ${data.status}`;
+
+        const arrowImg = document.getElementById("drone-arrow");
+        if (arrowImg) {
+            arrowImg.style.transform = `rotate(${data.heading}deg)`;
+        }
+    }
+
+
+    const ws = new WebSocket(`ws://${location.hostname}:8000/ws`);
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      updateDroneMarker(data);
+    };
+  </script>
+</body>
+</html>
