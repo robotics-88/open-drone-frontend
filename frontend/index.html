@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Drone Mission Control</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
@@ -16,9 +17,8 @@
       background: #f9f9f9;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    #map {
-      height: 90vh;
-    }
+    html, body { height: 100%; margin: 0; }
+    #map { height: 100vh; }
     select, button {
       font-size: 16px;
       padding: 6px 10px;
@@ -32,6 +32,10 @@
         display: block;
         pointer-events: none;
         image-rendering: auto;
+    }
+    button {
+      font-size: 18px;
+      padding: 12px 20px;
     }
   </style>
 </head>
