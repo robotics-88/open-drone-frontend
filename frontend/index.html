@@ -93,6 +93,7 @@
 
     // === Reference to the <select> ===
     const missionSelect = document.getElementById("missionSelect");
+    const missionMap = {};
 
     // === Fetch and populate missions into the dropdown ===
     async function loadCapabilities() {
@@ -104,7 +105,6 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const caps = JSON.parse(data.capabilities);
-
 
         // Reset to the default “select” line
         missionSelect.innerHTML = '<option value="">-- Select Mission --</option>';
@@ -120,6 +120,7 @@
         }
 
         missionArray.forEach(m => {
+          missionMap[m.name.toLowerCase()] = m;
           const opt = document.createElement('option');
           opt.value = m.name;
 
@@ -208,40 +209,31 @@
     // === Run the selected mission ===
     async function runMission() {
       const mission = missionSelect.value;
-      if (!mission) {
-        alert("Please select a mission.");
-        return;
-      }
+      if (!mission) return alert("Select a mission first.");
 
-      if (mission === "takeoff") {
-        await fetch(`${apiHost}/takeoff`, { method: "POST" });
+      const config = missionMap[mission.toLowerCase()];
+      if (!config) return alert("Mission config not found.");
 
-      } else if (mission === "setpoint") {
-        if (!setpointMarker) {
-          alert("Click on the map to set a target point first.");
-          return;
-        }
+      let payload = { type: mission };
+
+      if (config.geometry_type === "point") {
+        if (!setpointMarker) return alert("Click on the map to set a target point.");
         const { lat, lng } = setpointMarker.getLatLng();
-        const sp = { lat: lat, lon: lng, alt: 12.0 };
-        await fetch(`${apiHost}/setpoint`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(sp)
-        });
+        payload.setpoint = { lat, lon: lng, alt: 12.0 };
 
-      } else if (mission === "lawnmower") {
-        if (!polygonLayer) {
-          alert("Draw a polygon on the map first.");
-          return;
-        }
-        const latlngs = polygonLayer.getLatLngs()[0].map(coord => [coord.lat, coord.lng]);
-        await fetch(`${apiHost}/lawnmower`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ polygon: latlngs })
-        });
+      } else if (config.geometry_type === "polygon") {
+        if (!polygonLayer) return alert("Draw a polygon first.");
+        const latlngs = polygonLayer.getLatLngs()[0].map(p => ({ lat: p.lat, lon: p.lng }));
+        payload.polygon = latlngs;
       }
+
+      await fetch(`${apiHost}/run_mission`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
     }
+
 
     // === Recenter camera on drone ===
     function recenter() {
