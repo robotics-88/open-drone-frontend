@@ -2,8 +2,8 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drone Mission Control</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
@@ -26,7 +26,6 @@
 
     #map {
       flex: 1;
-      /* fill remaining space */
       width: 100%;
     }
 
@@ -62,18 +61,19 @@
 
 <body>
   <div id="controls">
-    <!-- Mission dropdown (populated in loadCapabilities) -->
     <select id="missionSelect">
       <option value="">-- Select Mission --</option>
     </select>
 
-    <!-- Run button -->
+    <select id="hostSelect" onchange="onHostChange()">
+      <option value="localhost:8080">localhost</option>
+      <option value="drone.local:8080">drone.local</option>
+      <option value="custom">Custom...</option>
+    </select>
+    <input type="text" id="customHost" placeholder="Enter IP or hostname" style="display:none;" oninput="onCustomHostInput()" />
+
     <button onclick="runMission()">Run</button>
-
-    <!-- Status text -->
     <span id="statusText">Status: unknown</span>
-
-    <!-- Recenter button -->
     <button onclick="recenter()">Recenter</button>
   </div>
 
@@ -82,22 +82,53 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
   <script>
-    const apiHost = "http://localhost:8888";
+    let apiHost;
+    let ws;
+
+    function onHostChange() {
+      const select = document.getElementById("hostSelect");
+      const input = document.getElementById("customHost");
+
+      if (select.value === "custom") {
+        input.style.display = "inline-block";
+        input.focus();
+        return; // Wait for custom input to be typed
+      } else {
+        input.style.display = "none";
+        apiHost = "http://" + select.value;
+        reloadHostDependentFeatures();
+      }
+    }
+
+    function onCustomHostInput() {
+      const input = document.getElementById("customHost");
+      let raw = input.value.trim();
+      if (!raw.startsWith("http://") && !raw.startsWith("https://")) {
+        raw = "http://" + raw;
+      }
+      apiHost = raw;
+      reloadHostDependentFeatures();
+    }
+
+    function reloadHostDependentFeatures() {
+      loadCapabilities();
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+      connectWebSocket();
+    }
 
     // === Leaflet map setup ===
-    let map = L.map('map').setView([37.422, -122.084], 17);
-    L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      { attribution: 'Tiles © Esri' }
-    ).addTo(map);
+    const map = L.map("map").setView([37.422, -122.084], 17);
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles © Esri",
+    }).addTo(map);
 
-    // === Reference to the <select> ===
     const missionSelect = document.getElementById("missionSelect");
     const missionMap = {};
 
-    // === Fetch and populate missions into the dropdown ===
     async function loadCapabilities() {
-      // Show a “loading” placeholder
       missionSelect.innerHTML = '<option value="">Loading missions…</option>';
 
       try {
@@ -106,30 +137,24 @@
         const data = await res.json();
         const caps = JSON.parse(data.capabilities);
 
-        // Reset to the default “select” line
         missionSelect.innerHTML = '<option value="">-- Select Mission --</option>';
 
-        // If there are no missions, show a placeholder
-        const missionArray = Array.isArray(caps.missions)
-          ? caps.missions
-          : Object.values(caps.missions);  // fallback for weird structures
+        const missionArray = Array.isArray(caps.missions) ? caps.missions : Object.values(caps.missions);
 
         if (missionArray.length === 0) {
           missionSelect.innerHTML = '<option value="">(No missions found)</option>';
           return;
         }
 
-        missionArray.forEach(m => {
+        missionArray.forEach((m) => {
           missionMap[m.name.toLowerCase()] = m;
-          const opt = document.createElement('option');
+          const opt = document.createElement("option");
           opt.value = m.name;
 
           if (m.available) {
             opt.textContent = m.name;
           } else {
-            const needs = Array.isArray(m.requires_activation)
-              ? m.requires_activation.join(', ')
-              : '';
+            const needs = Array.isArray(m.requires_activation) ? m.requires_activation.join(", ") : "";
             opt.textContent = `${m.name} (locked: ${needs})`;
             opt.disabled = true;
             opt.style.opacity = 0.5;
@@ -137,31 +162,32 @@
 
           missionSelect.appendChild(opt);
         });
-
       } catch (err) {
         console.error(err);
         missionSelect.innerHTML = '<option value="">Error loading missions</option>';
       }
     }
 
-    // Load once on page load
-    window.addEventListener('DOMContentLoaded', loadCapabilities);
+    window.addEventListener("DOMContentLoaded", () => {
+      const initialSelect = document.getElementById("hostSelect");
+      apiHost = "http://" + initialSelect.value;
 
-    // === Drone icon & marker ===
-    let DroneIcon = L.divIcon({
-      className: '',
-      iconSize: [40, 40],
-      html: '<img id="drone-arrow" src="arrow-bluev2.png" class="rotating-drone">'
+      loadCapabilities();
+      connectWebSocket();
     });
-    let droneMarker = L.marker([37.422, -122.084], { icon: DroneIcon }).addTo(map);
 
-    // === Drawn shapes & setpoint ===
+    const DroneIcon = L.divIcon({
+      className: "",
+      iconSize: [40, 40],
+      html: '<img id="drone-arrow" src="arrow-bluev2.png" class="rotating-drone" />',
+    });
+    const droneMarker = L.marker([37.422, -122.084], { icon: DroneIcon }).addTo(map);
+
     let setpointMarker = null;
     let polygonLayer = null;
     let drawing = false;
     let followDrone = true;
 
-    // === Leaflet-Draw setup ===
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
     const drawControl = new L.Control.Draw({
@@ -173,40 +199,39 @@
         marker: false,
         polygon: {
           allowIntersection: false,
-          showArea: true
-        }
+          showArea: true,
+        },
       },
       edit: {
-        featureGroup: drawnItems
-      }
+        featureGroup: drawnItems,
+      },
     });
     map.addControl(drawControl);
 
-    map.on('draw:created', function (e) {
+    map.on("draw:created", function (e) {
       const layer = e.layer;
-      if (e.layerType === 'polygon') {
+      if (e.layerType === "polygon") {
         if (polygonLayer) drawnItems.removeLayer(polygonLayer);
         polygonLayer = layer;
         drawnItems.addLayer(layer);
       }
     });
 
-    map.on('draw:drawstart', () => drawing = true);
-    map.on('draw:drawstop', () => drawing = false);
-    map.on('draw:editstart', () => drawing = true);
-    map.on('draw:editstop', () => drawing = false);
-    map.on('draw:deletestart', () => drawing = true);
-    map.on('draw:deletestop', () => drawing = false);
+    map.on("draw:drawstart", () => (drawing = true));
+    map.on("draw:drawstop", () => (drawing = false));
+    map.on("draw:editstart", () => (drawing = true));
+    map.on("draw:editstop", () => (drawing = false));
+    map.on("draw:deletestart", () => (drawing = true));
+    map.on("draw:deletestop", () => (drawing = false));
 
-    map.on("movestart", () => followDrone = false);
+    map.on("movestart", () => (followDrone = false));
 
-    map.on('click', function (e) {
+    map.on("click", function (e) {
       if (drawing) return;
       if (setpointMarker) map.removeLayer(setpointMarker);
       setpointMarker = L.marker(e.latlng).addTo(map);
     });
 
-    // === Run the selected mission ===
     async function runMission() {
       const mission = missionSelect.value;
       if (!mission) return alert("Select a mission first.");
@@ -220,22 +245,19 @@
         if (!setpointMarker) return alert("Click on the map to set a target point.");
         const { lat, lng } = setpointMarker.getLatLng();
         payload.setpoint = { lat, lon: lng, alt: 12.0 };
-
       } else if (config.geometry_type === "polygon") {
         if (!polygonLayer) return alert("Draw a polygon first.");
-        const latlngs = polygonLayer.getLatLngs()[0].map(p => ({ lat: p.lat, lon: p.lng }));
+        const latlngs = polygonLayer.getLatLngs()[0].map((p) => ({ lat: p.lat, lon: p.lng }));
         payload.polygon = latlngs;
       }
 
       await fetch(`${apiHost}/run_mission`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
     }
 
-
-    // === Recenter camera on drone ===
     function recenter() {
       followDrone = true;
       if (droneMarker) {
@@ -244,7 +266,6 @@
       }
     }
 
-    // === Update drone marker from WS data ===
     function updateDroneMarker(data) {
       droneMarker.setLatLng([data.lat, data.lon]);
       if (followDrone) {
@@ -257,12 +278,20 @@
       }
     }
 
-    // === WebSocket for live pose/status ===
-    const ws = new WebSocket(`ws://${location.hostname}:8888/ws`);
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      updateDroneMarker(data);
-    };
+    function connectWebSocket() {
+      const wsHost = apiHost.replace(/^http/, "ws");
+      ws = new WebSocket(`${wsHost}/ws`);
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        updateDroneMarker(data);
+      };
+
+      ws.onerror = (e) => {
+        console.error("WebSocket error", e);
+        document.getElementById("statusText").textContent = "Status: WS error";
+      };
+    }
   </script>
 </body>
 
