@@ -57,6 +57,28 @@
       pointer-events: none;
       image-rendering: auto;
     }
+
+    #videoOverlay {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      z-index: 1001;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 8px;
+      padding: 6px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    #videoOverlay button {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    #videoContainer iframe {
+      width: 320px;
+      height: 240px;
+      border-radius: 4px;
+    }
   </style>
 </head>
 
@@ -79,6 +101,13 @@
   </div>
 
   <div id="map"></div>
+
+  <div id="videoOverlay">
+    <button id="toggleVideoBtn">📹 Show Camera</button>
+    <div id="videoContainer" style="display: none;">
+      <iframe id="webrtcFrame" src="http://drone.local:8889/mapir" allow="autoplay" width="320" height="240" style="border: none;"></iframe>
+    </div>
+  </div>  
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
@@ -293,6 +322,26 @@
         document.getElementById("statusText").textContent = "Status: WS error";
       };
     }
+
+    document.getElementById("toggleVideoBtn").addEventListener("click", () => {
+      const container = document.getElementById("videoContainer");
+      const iframe = document.getElementById("webrtcFrame");
+      const btn = document.getElementById("toggleVideoBtn");
+
+      const isHidden = container.style.display === "none";
+
+      if (isHidden) {
+        container.style.display = "block";
+        iframe.src = `http://drone.local:8889/mapir`; // reconnect
+        btn.textContent = "📹 Hide Camera";
+      } else {
+        container.style.display = "none";
+        iframe.src = ""; // disconnect
+        btn.textContent = "📹 Show Camera";
+      }
+    });
+
+
   </script>
 </body>
 

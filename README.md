@@ -18,6 +18,6 @@ pip install -r requirements.txt
 Launch the web app:
 ```
 cd simple-drone-frontend/
-uvicorn main:app --reload
+uvicorn main:app --reload --host 0.0.0.0 --port 8040
 ```
-View here http://127.0.0.1:8000/
+View here http://127.0.0.1:8040/
