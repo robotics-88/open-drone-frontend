@@ -142,4 +142,27 @@ html, body {
     font-family: sans-serif;
     padding: 16px;
 }
+
+#logPanel {
+    height: 150px;
+    overflow-y: auto;
+    background: #111; /* dark background for contrast */
+    border-radius: 6px;
+    padding: 8px;
+    margin-top: 12px;
+    font-family: monospace;
+    font-size: 13px;
+    border: 1px solid #333;
+}
+
+/* Line severity colors */
+.log-line {
+    margin-bottom: 4px;
+    white-space: pre-wrap;
+}
+  
+.log-normal { color: #ddd; }
+.log-info   { color: #4caf50; }  /* green for user feedback */
+.log-warn   { color: #ffeb3b; }  /* yellow */
+.log-error  { color: #f44336; }  /* red */
   

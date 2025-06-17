@@ -158,20 +158,38 @@ async function runMission() {
     let payload = { type: mission };
 
     if (config.geometry_type === "point") {
-    if (!setpointMarker) return alert("Click on the map to set a target point.");
-    const { lat, lng } = setpointMarker.getLatLng();
-    payload.setpoint = { lat, lon: lng, alt: 12.0 };
-    } else if (config.geometry_type === "polygon") {
-    if (!polygonLayer) return alert("Draw a polygon first.");
-    const latlngs = polygonLayer.getLatLngs()[0].map((p) => ({ lat: p.lat, lon: p.lng }));
-    payload.polygon = latlngs;
+        if (!setpointMarker) return alert("Click on the map to set a target point.");
+        const { lat, lng } = setpointMarker.getLatLng();
+        payload.setpoint = { lat: lat, lon: lng, alt: 12.0 };
+    }
+    else if (config.geometry_type === "polygon") {
+        if (!polygonLayer) return alert("Draw a polygon first.");
+        const latlngs = polygonLayer.getLatLngs()[0].map((p) => ({ lat: p.lat, lon: p.lng }));
+        payload.polygon = latlngs;
     }
 
-    await fetch(`${apiHost}/run_mission`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    });
+    try {
+        appendLog(`Sending mission: ${mission}`, "info");
+    
+        const res = await fetch(`${apiHost}/run_mission`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+    
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    
+        appendLog("✅ Mission sent successfully.", "info");
+    
+        const result = await res.json(); // assuming your API returns a confirmation
+        if (result.status) {
+          appendLog(`Mission confirmed: ${result.status}`);
+        } else {
+          appendLog("Mission accepted.");
+        }
+    } catch (err) {
+        appendLog(`Mission send failed: ${err.message}`, "error");
+    }
 }
 
 function recenter() {
@@ -198,14 +216,29 @@ function connectWebSocket() {
     const wsHost = apiHost.replace(/^http/, "ws");
     ws = new WebSocket(`${wsHost}/ws`);
 
+    ws.onopen = () => {
+        appendLog("Drone connected.", "info");
+    };      
+
     ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    updateDroneMarker(data);
+        const data = JSON.parse(event.data);
+        
+        // If it's a drone status update
+        if (data.lat && data.lon) {
+            updateDroneMarker(data);
+        }
+
+        // If it's a log message
+        if (data.type === "log" || data.log) {
+            const log = data.log || data;
+            appendLog(log.message, log.level);
+        }
     };
 
     ws.onerror = (e) => {
-    console.error("WebSocket error", e);
-    document.getElementById("statusText").textContent = "Status: WS error";
+        console.error("WebSocket error", e);
+        document.getElementById("statusText").textContent = "Status: WS error";
+        appendLog("Drone connection error.", "error");
     };
 }
 
@@ -278,4 +311,13 @@ document.getElementById("toggleMissionBtn").addEventListener("click", () => {
     const panel = document.getElementById("missionPanel");
     panel.style.display = panel.style.display === "none" ? "block" : "none";
 });
+
+function appendLog(message, level = "normal") {
+    const logContent = document.getElementById("logContent");
+    const line = document.createElement("div");
+    line.className = `log-line log-${level}`;
+    line.textContent = message;
   
+    logContent.appendChild(line);
+    logContent.scrollTop = logContent.scrollHeight; // auto-scroll to bottom
+}  
