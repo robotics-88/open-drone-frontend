@@ -4,39 +4,40 @@ html, body {
     padding: 0;
     display: flex;
     flex-direction: column;
-  }
-  
-  #controls {
+}
+
+#controls {
     padding: 10px;
     background: #f9f9f9;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-  }
-  
-  #map {
+}
+
+#map {
     flex: 1;
     width: 100%;
-  }
-  
-  #controls select,
-  #controls button {
+    top: 40px;
+}
+
+#controls select,
+#controls button {
     font-size: 16px;
     padding: 6px 10px;
     margin-right: 10px;
-  }
-  
-  #controls button {
+}
+
+#controls button {
     font-size: 18px;
     padding: 12px 20px;
-  }
-  
-  #statusText {
+}
+
+#statusText {
     margin-right: 10px;
     font-weight: bold;
     font-family: Arial, sans-serif;
-  }
-  
-  .rotating-drone {
+}
+
+.rotating-drone {
     width: 40px;
     height: 40px;
     transform-origin: center center;
@@ -44,9 +45,9 @@ html, body {
     display: block;
     pointer-events: none;
     image-rendering: auto;
-  }
-  
-  #videoOverlay {
+}
+
+#videoOverlay {
     position: absolute;
     bottom: 10px;
     right: 10px;
@@ -55,17 +56,90 @@ html, body {
     border-radius: 8px;
     padding: 6px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-  
-  #videoOverlay button {
+}
+
+#videoOverlay button {
     font-size: 14px;
     margin-bottom: 4px;
-  }
-  
-  #videoContainer iframe {
+}
+
+#videoContainer iframe {
     width: 320px;
     height: 240px;
     border-radius: 4px;
     border: none;
-  }
+}
+
+#topStatusBar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: rgba(30, 30, 30, 0.9);
+    color: #fff;
+    font-family: sans-serif;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 10px;
+    z-index: 1002;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+  
+#topStatusBar .material-icons {
+    vertical-align: middle;
+    font-size: 18px;
+    margin-right: 4px;
+}
+
+/* Drone status text in center */
+.status-indicator {
+    font-weight: bold;
+    font-size: 15px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.1);
+}
+
+/* Status color variants */
+.status-green { color: #00e676; }
+.status-yellow { color: #ffeb3b; }
+.status-red { color: #f44336; }
+
+/* Optional: red battery icon when low */
+.low-battery {
+    color: #f44336 !important;
+}  
+
+#missionOverlay {
+    position: absolute;
+    top: 60px;
+    right: 10px;
+    z-index: 1001;
+}
+
+#toggleMissionBtn {
+    font-size: 20px;
+    padding: 6px 10px;
+}
+
+#missionPanel select,
+#missionPanel input,
+#missionPanel button,
+#missionPanel span {
+  font-size: 18px;
+}
+
+#missionPanel {
+    margin-top: 6px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    font-size: 18px;
+    font-family: sans-serif;
+    padding: 16px;
+}
   

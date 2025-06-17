@@ -226,3 +226,56 @@ document.getElementById("toggleVideoBtn").addEventListener("click", () => {
     btn.textContent = "📹 Show Camera";
     }
 });
+
+function updateHUD(data) {
+    // === GPS Satellites (assume it's a number)
+    const gpsIcon = document.getElementById("gpsSatellites");
+    gpsIcon.textContent = data.gps_satellites >= 10 ? "gps_fixed" : "gps_not_fixed";
+  
+    // === Number of Cameras
+    const numCameras = document.getElementById("numCameras");
+    numCameras.nextSibling.textContent = ` ${data.num_cameras || 0}`;
+  
+    // === Battery Voltage + Red if low
+    const batteryIcon = document.getElementById("batteryIcon");
+    const batteryVolts = document.getElementById("batteryVolts");
+    batteryVolts.textContent = `${data.battery_voltage.toFixed(1)}V`;
+  
+    if (data.battery_voltage < 10.5) {
+      batteryIcon.classList.add("low-battery");
+    } else {
+      batteryIcon.classList.remove("low-battery");
+    }
+  
+    // === Drone State Text + Color
+    const droneState = document.getElementById("droneState");
+    const status = data.status || "Unknown";
+    droneState.textContent = `Status: ${status}`;
+    droneState.classList.remove("status-green", "status-yellow", "status-red");
+  
+    if (["Ready", "Armed", "Flying"].includes(status)) {
+      droneState.classList.add("status-green");
+    } else if (["Initializing", "RTL", "Landing"].includes(status)) {
+      droneState.classList.add("status-yellow");
+    } else if (["Disconnected", "Failsafe", "Connection lost", "Error"].includes(status)) {
+      droneState.classList.add("status-red");
+    }
+  
+    // === Height
+    const heightIcon = document.getElementById("heightAboveHome");
+    heightIcon.nextSibling.textContent = ` H: ${data.height?.toFixed(1) || "--"} m`;
+  
+    // === Distance
+    const distIcon = document.getElementById("distanceToHome");
+    distIcon.nextSibling.textContent = ` D: ${data.distance?.toFixed(1) || "--"} m`;
+  
+    // === Speed
+    const speedIcon = document.getElementById("speed");
+    speedIcon.nextSibling.textContent = ` HS: ${data.speed?.toFixed(1) || "--"} m/s`;
+}  
+  
+document.getElementById("toggleMissionBtn").addEventListener("click", () => {
+    const panel = document.getElementById("missionPanel");
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+});
+  

@@ -9,25 +9,40 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
   <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 
 <body>
-  <div id="controls">
-    <select id="missionSelect">
-      <option value="">-- Select Mission --</option>
-    </select>
+  <div id="missionOverlay">
+    <button id="toggleMissionBtn">🗺️ Mission Panel</button>
+    <div id="missionPanel" style="display: none;">
+      <select id="missionSelect">
+        <option value="">-- Select Mission --</option>
+      </select>
+  
+      <select id="hostSelect" onchange="onHostChange()">
+        <option value="localhost:8080">localhost</option>
+        <option value="drone.local:8080">drone.local</option>
+        <option value="custom">Custom...</option>
+      </select>
+      <input type="text" id="customHost" placeholder="Enter IP or hostname" style="display:none;" oninput="onCustomHostInput()" />
+  
+      <button onclick="runMission()">Run</button>
+      <button onclick="recenter()">Recenter</button>
+    </div>
+  </div>  
 
-    <select id="hostSelect" onchange="onHostChange()">
-      <option value="localhost:8080">localhost</option>
-      <option value="drone.local:8080">drone.local</option>
-      <option value="custom">Custom...</option>
-    </select>
-    <input type="text" id="customHost" placeholder="Enter IP or hostname" style="display:none;" oninput="onCustomHostInput()" />
+  <div id="topStatusBar">
+    <span><span class="material-icons" id="gpsSatellites">satellite_alt</span> GPS</span>
+    <span><span class="material-icons" id="numCameras">camera_alt</span> --</span>  
+    <span><span class="material-icons" id="batteryIcon">battery_std</span> <span id="batteryVolts">--V</span></span>
+    <!-- Dynamic drone status goes here -->
+    <span id="droneState" class="status-indicator">Status: --</span>
 
-    <button onclick="runMission()">Run</button>
-    <span id="statusText">Status: unknown</span>
-    <button onclick="recenter()">Recenter</button>
-  </div>
+    <span><span class="material-icons" id="heightAboveHome">height</span> H: -- m</span>
+    <span><span class="material-icons" id="distanceToHome">straighten</span> D: -- m</span>
+    <span><span class="material-icons" id="speed">speed</span> HS: -- m/s</span>
+  </div>    
 
   <div id="map"></div>
 
