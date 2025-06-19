@@ -251,7 +251,7 @@ document.getElementById("toggleVideoBtn").addEventListener("click", () => {
 
     if (isHidden) {
     container.style.display = "block";
-    iframe.src = `http://drone.local:8889/mapir`; // reconnect
+    iframe.src = `http://drone.local:8889/camera1`; // reconnect
     btn.textContent = "📹 Hide Camera";
     } else {
     container.style.display = "none";
