@@ -36,16 +36,32 @@
   </div>  
 
   <div id="topStatusBar">
-    <span><span class="material-icons" id="gpsSatellites">satellite_alt</span> GPS</span>
-    <span><span class="material-icons" id="numCameras">camera_alt</span> --</span>  
-    <span><span class="material-icons" id="batteryIcon">battery_std</span> <span id="batteryVolts">--V</span></span>
-    <!-- Dynamic drone status goes here -->
+    <span>
+      <span class="material-icons" id="gpsSatellites">satellite_alt</span>
+      <span id="gpsCount">--</span>
+    </span>
+    <span>
+      <span class="material-icons" id="numCameras">camera_alt</span>
+      <span id="cameraCount">0</span>
+    </span>
+    <span>
+      <span class="material-icons" id="batteryIcon">battery_std</span>
+      <span id="batteryVolts">--V</span>
+    </span>
     <span id="droneState" class="status-indicator">Status: --</span>
-
-    <span><span class="material-icons" id="heightAboveHome">height</span> H: -- m</span>
-    <span><span class="material-icons" id="distanceToHome">straighten</span> D: -- m</span>
-    <span><span class="material-icons" id="speed">speed</span> HS: -- m/s</span>
-  </div>    
+    <span>
+      <span class="material-icons" id="heightAboveHome">height</span>
+      <span id="heightVal">-- m</span>
+    </span>
+    <span>
+      <span class="material-icons" id="distanceToHome">straighten</span>
+      <span id="distanceVal">-- m</span>
+    </span>
+    <span>
+      <span class="material-icons" id="speed">speed</span>
+      <span id="speedVal">-- m/s</span>
+    </span>
+  </div>  
 
   <div id="map"></div>
 

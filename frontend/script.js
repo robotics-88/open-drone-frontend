@@ -203,12 +203,11 @@ function recenter() {
 function updateDroneMarker(data) {
     droneMarker.setLatLng([data.lat, data.lon]);
     if (followDrone) {
-    map.panTo([data.lat, data.lon]);
+        map.panTo([data.lat, data.lon]);
     }
-    document.getElementById("statusText").textContent = `Status: ${data.status}`;
     const arrowImg = document.getElementById("drone-arrow");
     if (arrowImg) {
-    arrowImg.style.transform = `rotate(${data.heading}deg)`;
+        arrowImg.style.transform = `rotate(${data.heading}deg)`;
     }
 }
 
@@ -224,8 +223,9 @@ function connectWebSocket() {
         const data = JSON.parse(event.data);
         
         // If it's a drone status update
-        if (data.lat && data.lon) {
+        if (data.type === "telemetry") {
             updateDroneMarker(data);
+            updateHUD(data);
         }
 
         // If it's a log message
@@ -261,51 +261,35 @@ document.getElementById("toggleVideoBtn").addEventListener("click", () => {
 });
 
 function updateHUD(data) {
-    // === GPS Satellites (assume it's a number)
-    const gpsIcon = document.getElementById("gpsSatellites");
-    gpsIcon.textContent = data.gps_satellites >= 10 ? "gps_fixed" : "gps_not_fixed";
+    console.log("Updating HUD with data:", data);
+    // === GPS Icon + count
+    document.getElementById("gpsSatellites").textContent =
+      data.gps_satellites >= 10 ? "gps_fixed" : "gps_not_fixed";
+    document.getElementById("gpsCount").textContent = data.gps_satellites;
   
-    // === Number of Cameras
-    const numCameras = document.getElementById("numCameras");
-    numCameras.nextSibling.textContent = ` ${data.num_cameras || 0}`;
+    // === Num cameras
+    document.getElementById("cameraCount").textContent = data.num_cameras || 0;
   
-    // === Battery Voltage + Red if low
-    const batteryIcon = document.getElementById("batteryIcon");
-    const batteryVolts = document.getElementById("batteryVolts");
-    batteryVolts.textContent = `${data.battery_voltage.toFixed(1)}V`;
+    // === Battery
+    const vb = data.battery_voltage.toFixed(1);
+    document.getElementById("batteryVolts").textContent = `${vb}V`;
+    const battIcon = document.getElementById("batteryIcon");
+    if (data.battery_voltage < 10.5) battIcon.classList.add("low-battery");
+    else battIcon.classList.remove("low-battery");
   
-    if (data.battery_voltage < 10.5) {
-      batteryIcon.classList.add("low-battery");
-    } else {
-      batteryIcon.classList.remove("low-battery");
-    }
+    // === Drone state
+    const stateEl = document.getElementById("droneState");
+    stateEl.textContent = `Status: ${data.status || "--"}`;
+    stateEl.classList.remove("status-green","status-yellow","status-red");
+    if (["Ready","Armed","Flying"].includes(data.status))      stateEl.classList.add("status-green");
+    else if (["Initializing","RTL","Landing"].includes(data.status)) stateEl.classList.add("status-yellow");
+    else                                                       stateEl.classList.add("status-red");
   
-    // === Drone State Text + Color
-    const droneState = document.getElementById("droneState");
-    const status = data.status || "Unknown";
-    droneState.textContent = `Status: ${status}`;
-    droneState.classList.remove("status-green", "status-yellow", "status-red");
-  
-    if (["Ready", "Armed", "Flying"].includes(status)) {
-      droneState.classList.add("status-green");
-    } else if (["Initializing", "RTL", "Landing"].includes(status)) {
-      droneState.classList.add("status-yellow");
-    } else if (["Disconnected", "Failsafe", "Connection lost", "Error"].includes(status)) {
-      droneState.classList.add("status-red");
-    }
-  
-    // === Height
-    const heightIcon = document.getElementById("heightAboveHome");
-    heightIcon.nextSibling.textContent = ` H: ${data.height?.toFixed(1) || "--"} m`;
-  
-    // === Distance
-    const distIcon = document.getElementById("distanceToHome");
-    distIcon.nextSibling.textContent = ` D: ${data.distance?.toFixed(1) || "--"} m`;
-  
-    // === Speed
-    const speedIcon = document.getElementById("speed");
-    speedIcon.nextSibling.textContent = ` HS: ${data.speed?.toFixed(1) || "--"} m/s`;
-}  
+    // === Height / Distance / Speed
+    document.getElementById("heightVal").textContent   = `${(data.height || 0).toFixed(1)} m`;
+    document.getElementById("distanceVal").textContent = `${(data.distance || 0).toFixed(1)} m`;
+    document.getElementById("speedVal").textContent    = `${(data.speed || 0).toFixed(1)} m/s`;
+  }
   
 document.getElementById("toggleMissionBtn").addEventListener("click", () => {
     const panel = document.getElementById("missionPanel");
