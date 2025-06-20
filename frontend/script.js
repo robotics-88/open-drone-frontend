@@ -271,7 +271,7 @@ function updateHUD(data) {
     document.getElementById("cameraCount").textContent = data.num_cameras || 0;
   
     // === Battery
-    const vb = data.battery_voltage.toFixed(1);
+    const vb = data.battery_voltage.toFixed(4);
     document.getElementById("batteryVolts").textContent = `${vb}V`;
     const battIcon = document.getElementById("batteryIcon");
     if (data.battery_voltage < 10.5) battIcon.classList.add("low-battery");
