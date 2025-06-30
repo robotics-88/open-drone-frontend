@@ -1,5 +1,6 @@
 let apiHost;
 let ws;
+let lastTelemetryTimestamp = 0;
 
 function onHostChange() {
     const select = document.getElementById("hostSelect");
@@ -33,6 +34,20 @@ function reloadHostDependentFeatures() {
     ws.close();
     }
     connectWebSocket();
+}
+
+// helper to toggle the “stale” class on all HUD elements
+function setHUDStale(isStale) {
+  const hudIds = [
+    'gpsCount','cameraCount',
+    'batteryVolts','droneState',
+    'heightVal','distanceVal','speedVal'
+  ];
+  hudIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('stale', isStale);
+  });
 }
 
 // === Leaflet map setup ===
@@ -90,6 +105,13 @@ window.addEventListener("DOMContentLoaded", () => {
 
     loadCapabilities();
     connectWebSocket();
+
+    setInterval(() => {
+    if (Date.now() - lastTelemetryTimestamp > 5000) {
+        setHUDStale(true);
+        console.log("No telemetry received in 5 seconds, marking HUD as stale.");
+    }
+    }, 1000);
 });
 
 const DroneIcon = L.divIcon({
@@ -220,15 +242,28 @@ function connectWebSocket() {
     };      
 
     ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        // If it's a drone status update
+        if (!event.data || event.data.trim() === "") {
+            console.warn("Received empty message over WebSocket");
+            return;
+        }
+
+        let data;
+        try {
+            data = JSON.parse(event.data);
+        } catch (err) {
+            console.error("Failed to parse WebSocket message:", event.data);
+            return;
+        }
+
+        // Handle telemetry
         if (data.type === "telemetry") {
             updateDroneMarker(data);
             updateHUD(data);
+            lastTelemetryTimestamp = Date.now();
+            setHUDStale(false);
         }
 
-        // If it's a log message
+        // Handle logs
         if (data.type === "log" || data.log) {
             const log = data.log || data;
             appendLog(log.message, log.level);
@@ -261,7 +296,6 @@ document.getElementById("toggleVideoBtn").addEventListener("click", () => {
 });
 
 function updateHUD(data) {
-    console.log("Updating HUD with data:", data);
     // === GPS Icon + count
     document.getElementById("gpsSatellites").textContent =
       data.gps_satellites >= 10 ? "gps_fixed" : "gps_not_fixed";
@@ -273,16 +307,13 @@ function updateHUD(data) {
     // === Battery
     const vb = data.battery_voltage.toFixed(4);
     document.getElementById("batteryVolts").textContent = `${vb}V`;
-    const battIcon = document.getElementById("batteryIcon");
-    if (data.battery_voltage < 10.5) battIcon.classList.add("low-battery");
-    else battIcon.classList.remove("low-battery");
   
     // === Drone state
     const stateEl = document.getElementById("droneState");
     stateEl.textContent = `Status: ${data.status || "--"}`;
     stateEl.classList.remove("status-green","status-yellow","status-red");
-    if (["Ready","Armed","Flying"].includes(data.status))      stateEl.classList.add("status-green");
-    else if (["Initializing","RTL","Landing"].includes(data.status)) stateEl.classList.add("status-yellow");
+    if (["READY","MANUAL_FLIGHT","MISSION","COMPLETE"].includes(data.status))      stateEl.classList.add("status-green");
+    else if (["INITIALIZING","PREFLIGHT_CHECK","RTL_88","TAKING_OFF","LANDING"].includes(data.status)) stateEl.classList.add("status-yellow");
     else                                                       stateEl.classList.add("status-red");
   
     // === Height / Distance / Speed

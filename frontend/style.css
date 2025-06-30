@@ -37,6 +37,12 @@ html, body {
     font-family: Arial, sans-serif;
 }
 
+/* make any element with .stale gray & slightly faded */
+.stale {
+  color: gray !important;
+  opacity: 0.6;
+}
+
 .rotating-drone {
     width: 40px;
     height: 40px;
