@@ -63,39 +63,44 @@ async function loadCapabilities() {
     missionSelect.innerHTML = '<option value="">Loading missions…</option>';
 
     try {
-    const res = await fetch(`${apiHost}/capabilities`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const caps = JSON.parse(data.capabilities);
+        const res = await fetch(`${apiHost}/capabilities`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    missionSelect.innerHTML = '<option value="">-- Select Mission --</option>';
+        const data = await res.json();
+        if (!data.capabilities) {
+            missionSelect.innerHTML = '<option value="">(No capabilities provided)</option>';
+            return;
+        }
+        const caps = JSON.parse(data.capabilities);
 
-    const missionArray = Array.isArray(caps.missions) ? caps.missions : Object.values(caps.missions);
+        missionSelect.innerHTML = '<option value="">-- Select Mission --</option>';
 
-    if (missionArray.length === 0) {
-        missionSelect.innerHTML = '<option value="">(No missions found)</option>';
-        return;
-    }
+        const missionArray = Array.isArray(caps.missions) ? caps.missions : Object.values(caps.missions);
 
-    missionArray.forEach((m) => {
-        missionMap[m.name.toLowerCase()] = m;
-        const opt = document.createElement("option");
-        opt.value = m.name;
-
-        if (m.available) {
-        opt.textContent = m.name;
-        } else {
-        const needs = Array.isArray(m.requires_activation) ? m.requires_activation.join(", ") : "";
-        opt.textContent = `${m.name} (locked: ${needs})`;
-        opt.disabled = true;
-        opt.style.opacity = 0.5;
+        if (missionArray.length === 0) {
+            missionSelect.innerHTML = '<option value="">(No missions found)</option>';
+            return;
         }
 
-        missionSelect.appendChild(opt);
-    });
+        missionArray.forEach((m) => {
+            missionMap[m.name.toLowerCase()] = m;
+            const opt = document.createElement("option");
+            opt.value = m.name;
+
+            if (m.available) {
+            opt.textContent = m.name;
+            } else {
+            const needs = Array.isArray(m.requires_activation) ? m.requires_activation.join(", ") : "";
+            opt.textContent = `${m.name} (locked: ${needs})`;
+            opt.disabled = true;
+            opt.style.opacity = 0.5;
+            }
+
+            missionSelect.appendChild(opt);
+        });
     } catch (err) {
-    console.error(err);
-    missionSelect.innerHTML = '<option value="">Error loading missions</option>';
+        console.error(err);
+        missionSelect.innerHTML = '<option value="">Error loading missions</option>';
     }
 }
 
