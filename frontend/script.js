@@ -196,7 +196,7 @@ async function runMission() {
     }
 
     try {
-        appendLog(`Sending mission: ${mission}`, "info");
+        appendLog(`Sending mission: ${mission}`, "normal");
     
         const res = await fetch(`${apiHost}/run_mission`, {
           method: "POST",
@@ -205,9 +205,9 @@ async function runMission() {
         });
     
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    
-        appendLog("✅ Mission sent successfully.", "info");
-    
+
+        appendLog("✅ Mission sent successfully.", "normal");
+
         const result = await res.json(); // assuming your API returns a confirmation
         if (result.status) {
           appendLog(`Mission confirmed: ${result.status}`);
@@ -243,7 +243,7 @@ function connectWebSocket() {
     ws = new WebSocket(`${wsHost}/ws`);
 
     ws.onopen = () => {
-        appendLog("Drone connected.", "info");
+        appendLog("Drone connected.", "normal");
     };      
 
     ws.onmessage = (event) => {
@@ -271,7 +271,7 @@ function connectWebSocket() {
         // Handle logs
         if (data.type === "log" || data.log) {
             const log = data.log || data;
-            appendLog(log.message, log.level);
+            appendLog(log.message, log.level.toLowerCase());
         }
     };
 
