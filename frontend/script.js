@@ -68,20 +68,17 @@ async function loadCapabilities() {
 
         const data = await res.json();
         if (!data.capabilities) {
-            missionSelect.innerHTML = '<option value="">(No capabilities provided)</option>';
-            return;
+        missionSelect.innerHTML = '<option value="">(No capabilities provided)</option>';
+        return;
         }
+
         const caps = JSON.parse(data.capabilities);
-
-        missionSelect.innerHTML = '<option value="">-- Select Mission --</option>';
-
         const missionArray = Array.isArray(caps.missions) ? caps.missions : Object.values(caps.missions);
 
+        missionSelect.innerHTML = '<option value="">-- Select Mission --</option>';
         if (missionArray.length === 0) {
-            missionSelect.innerHTML = '<option value="">(No missions found)</option>';
-            return;
-        }
-
+        missionSelect.innerHTML = '<option value="">(No missions found)</option>';
+        } else {
         missionArray.forEach((m) => {
             missionMap[m.name.toLowerCase()] = m;
             const opt = document.createElement("option");
@@ -98,6 +95,43 @@ async function loadCapabilities() {
 
             missionSelect.appendChild(opt);
         });
+        }
+
+        // Render perception modules
+        const perceptionModulesDiv = document.getElementById("perceptionModules");
+        perceptionModulesDiv.innerHTML = "";
+
+        if (caps.perception_modules) {
+            for (const [moduleName, isActive] of Object.entries(caps.perception_modules)) {
+                const modDiv = document.createElement("div");
+                modDiv.className = "perception-module";
+
+                const label = document.createElement("span");
+                label.textContent = moduleName;
+
+                const toggle = document.createElement("input");
+                toggle.type = "checkbox";
+                toggle.checked = isActive;
+                toggle.dataset.module = moduleName;
+
+                toggle.addEventListener("change", (e) => {
+                const newState = e.target.checked;
+                fetch(`${apiHost}/set_module_active`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                    module_name: e.target.dataset.module,
+                    active: newState,
+                    }),
+                }).catch((err) => console.error("Failed to set module state", err));
+                });
+
+                modDiv.appendChild(label);
+                modDiv.appendChild(toggle);
+                perceptionModulesDiv.appendChild(modDiv);
+            }
+        }
+
     } catch (err) {
         console.error(err);
         missionSelect.innerHTML = '<option value="">Error loading missions</option>';
