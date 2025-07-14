@@ -102,17 +102,25 @@ async function loadCapabilities() {
         perceptionModulesDiv.innerHTML = "";
 
         if (caps.perception_modules) {
-            for (const [moduleName, isActive] of Object.entries(caps.perception_modules)) {
+            for (const [moduleName, info] of Object.entries(caps.perception_modules)) {
+                console.log(`Module: ${moduleName}`, info);
+                const isActive = info.active;
+                const isTogglable = info.togglable;
+
                 const modDiv = document.createElement("div");
                 modDiv.className = "perception-module";
 
                 const label = document.createElement("span");
                 label.textContent = moduleName;
+                if (!isTogglable) {
+                label.style.opacity = "0.6";
+                }
 
                 const toggle = document.createElement("input");
                 toggle.type = "checkbox";
                 toggle.checked = isActive;
                 toggle.dataset.module = moduleName;
+                toggle.disabled = !isTogglable;
 
                 toggle.addEventListener("change", (e) => {
                 const newState = e.target.checked;
@@ -131,6 +139,7 @@ async function loadCapabilities() {
                 perceptionModulesDiv.appendChild(modDiv);
             }
         }
+
 
     } catch (err) {
         console.error(err);
@@ -306,6 +315,12 @@ function connectWebSocket() {
         if (data.type === "log" || data.log) {
             const log = data.log || data;
             appendLog(log.message, log.level.toLowerCase());
+        }
+
+        // Handle capability reload
+        if (data.type === "capability_reload" || data.log) {
+            appendLog("Capabilities reloaded from drone.", "normal");
+            loadCapabilities();
         }
     };
 

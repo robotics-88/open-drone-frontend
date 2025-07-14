@@ -140,6 +140,11 @@ html, body {
   font-size: 18px;
 }
 
+#missionSelect {
+  min-width: 200px;
+  max-width: 100%;
+}
+
 #missionPanel {
     position: absolute;
     right: 2px;
@@ -151,6 +156,7 @@ html, body {
     font-size: 18px;
     font-family: sans-serif;
     z-index: 1;
+    width: 500px;
 }
 
 #logPanel {
