@@ -58,6 +58,8 @@ L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/
 
 const missionSelect = document.getElementById("missionSelect");
 const missionMap = {};
+let selectedMissionConfig = null;
+let availableDEMs = [];
 
 async function loadCapabilities() {
     missionSelect.innerHTML = '<option value="">Loading missions…</option>';
@@ -89,7 +91,6 @@ async function loadCapabilities() {
             } else {
             const needs = Array.isArray(m.requires_activation) ? m.requires_activation.join(", ") : "";
             opt.textContent = `${m.name} (locked: ${needs})`;
-            opt.disabled = true;
             opt.style.opacity = 0.5;
             }
 
@@ -153,6 +154,13 @@ window.addEventListener("DOMContentLoaded", () => {
 
     loadCapabilities();
     connectWebSocket();
+
+    missionSelect.addEventListener("change", () => {
+        const missionName = missionSelect.value;
+        const lowerName = missionName.toLowerCase();
+        selectedMissionConfig = missionMap[lowerName];
+        renderMissionDetails(selectedMissionConfig);
+    });
 
     setInterval(() => {
     if (Date.now() - lastTelemetryTimestamp > 5000) {
@@ -389,4 +397,91 @@ function appendLog(message, level = "normal") {
   
     logContent.appendChild(line);
     logContent.scrollTop = logContent.scrollHeight; // auto-scroll to bottom
-}  
+}
+
+async function renderMissionDetails(config) {
+    const container = document.getElementById("missionDetails");
+    container.innerHTML = "";
+
+    if (!config) return;
+
+    const isLocked = !config.available;
+    if (!isLocked) return; // No extra UI needed
+
+    const required = Array.isArray(config.requires_activation) ? config.requires_activation : [];
+
+    // Title
+    const header = document.createElement("h4");
+    header.innerHTML = `<span class="material-icons">lock</span> Locked Mission Requirements`;
+    container.appendChild(header);
+
+    // Required perception modules
+    const checkboxWrapper = document.createElement("div");
+    checkboxWrapper.style.display = "flex";
+    checkboxWrapper.style.alignItems = "center";
+    checkboxWrapper.style.gap = "8px";
+
+    const acceptBox = document.createElement("input");
+    acceptBox.type = "checkbox";
+    acceptBox.id = "acceptModules";
+
+    const acceptLabel = document.createElement("label");
+    acceptLabel.textContent = `Requires activating: ${required.join(", ")}`;
+    acceptLabel.setAttribute("for", "acceptModules");
+
+    checkboxWrapper.appendChild(acceptBox);
+    checkboxWrapper.appendChild(acceptLabel);
+    container.appendChild(checkboxWrapper);
+
+    // DEM selection
+    const demHeader = document.createElement("h4");
+    demHeader.innerHTML = `<span class="material-icons">folder</span> Attach DEM (optional)`;
+    container.appendChild(demHeader);
+
+    const demDropdown = document.createElement("select");
+    demDropdown.id = "demSelector";
+    demDropdown.innerHTML = "<option value=''>-- No DEM --</option>";
+
+    if (availableDEMs.length === 0) {
+        await fetchAvailableDEMs();
+    }
+
+    for (const dem of availableDEMs) {
+        const opt = document.createElement("option");
+        opt.value = dem.filename;
+        opt.textContent = `${dem.filename} (${dem.size_mb.toFixed(1)} MB)`;
+        demDropdown.appendChild(opt);
+    }
+
+    container.appendChild(demDropdown);
+
+    // DEM upload
+    const uploadInput = document.createElement("input");
+    uploadInput.type = "file";
+    uploadInput.accept = ".tif";
+    uploadInput.id = "demUpload";
+    container.appendChild(uploadInput);
+
+    // Enable Run only if acceptBox is checked
+    const runBtn = document.querySelector("button[onclick='runMission()']");
+    if (isLocked) {
+        runBtn.disabled = true;
+
+        acceptBox.addEventListener("change", () => {
+            runBtn.disabled = !acceptBox.checked;
+        });
+    } else {
+        runBtn.disabled = false;
+    }
+
+}
+
+async function fetchAvailableDEMs() {
+    try {
+        const res = await fetch(`${apiHost}/dems`);
+        const json = await res.json();
+        if (Array.isArray(json)) availableDEMs = json;
+    } catch (err) {
+        console.warn("Could not fetch DEM list", err);
+    }
+}
