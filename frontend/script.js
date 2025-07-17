@@ -406,7 +406,10 @@ async function renderMissionDetails(config) {
     if (!config) return;
 
     const isLocked = !config.available;
-    if (!isLocked) return; // No extra UI needed
+    if (!isLocked) {
+        renderDemSection(container);
+        return;
+    }
 
     const required = Array.isArray(config.requires_activation) ? config.requires_activation : [];
 
@@ -434,33 +437,7 @@ async function renderMissionDetails(config) {
     container.appendChild(checkboxWrapper);
 
     // DEM selection
-    const demHeader = document.createElement("h4");
-    demHeader.innerHTML = `<span class="material-icons">folder</span> Attach DEM (optional)`;
-    container.appendChild(demHeader);
-
-    const demDropdown = document.createElement("select");
-    demDropdown.id = "demSelector";
-    demDropdown.innerHTML = "<option value=''>-- No DEM --</option>";
-
-    if (availableDEMs.length === 0) {
-        await fetchAvailableDEMs();
-    }
-
-    for (const dem of availableDEMs) {
-        const opt = document.createElement("option");
-        opt.value = dem.filename;
-        opt.textContent = `${dem.filename} (${dem.size_mb.toFixed(1)} MB)`;
-        demDropdown.appendChild(opt);
-    }
-
-    container.appendChild(demDropdown);
-
-    // DEM upload
-    const uploadInput = document.createElement("input");
-    uploadInput.type = "file";
-    uploadInput.accept = ".tif";
-    uploadInput.id = "demUpload";
-    container.appendChild(uploadInput);
+    renderDemSection(container);
 
     // Enable Run only if acceptBox is checked
     const runBtn = document.querySelector("button[onclick='runMission()']");
@@ -483,5 +460,40 @@ async function fetchAvailableDEMs() {
         if (Array.isArray(json)) availableDEMs = json;
     } catch (err) {
         console.warn("Could not fetch DEM list", err);
+    }
+}
+
+function renderDemSection(container) {
+    const demHeader = document.createElement("h4");
+    demHeader.innerHTML = `<span class="material-icons">folder</span> Attach DEM (optional)`;
+    container.appendChild(demHeader);
+
+    const demDropdown = document.createElement("select");
+    demDropdown.id = "demSelector";
+    demDropdown.innerHTML = "<option value=''>-- No DEM --</option>";
+    container.appendChild(demDropdown);
+
+    const uploadInput = document.createElement("input");
+    uploadInput.type = "file";
+    uploadInput.accept = ".tif";
+    uploadInput.id = "demUpload";
+    container.appendChild(uploadInput);
+
+    if (availableDEMs.length === 0) {
+        fetchAvailableDEMs().then(() => {
+            availableDEMs.forEach((dem) => {
+                const opt = document.createElement("option");
+                opt.value = dem.filename;
+                opt.textContent = dem.filename;
+                demDropdown.appendChild(opt);
+            });
+        });
+    } else {
+        availableDEMs.forEach((dem) => {
+            const opt = document.createElement("option");
+            opt.value = dem.filename;
+            opt.textContent = dem.filename;
+            demDropdown.appendChild(opt);
+        });
     }
 }
