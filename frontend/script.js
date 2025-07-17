@@ -458,6 +458,7 @@ async function fetchAvailableDEMs() {
         const res = await fetch(`${apiHost}/dems`);
         const json = await res.json();
         if (Array.isArray(json)) availableDEMs = json;
+        renderDEMPreviews(availableDEMs);
     } catch (err) {
         console.warn("Could not fetch DEM list", err);
     }
@@ -496,4 +497,43 @@ function renderDemSection(container) {
             demDropdown.appendChild(opt);
         });
     }
+    demDropdown.addEventListener("change", () => {
+        const selected = demDropdown.value;
+
+        for (const [filename, rect] of Object.entries(demRectangles)) {
+            rect.setStyle({
+                color: filename === selected ? "#2196F3" : "#888888", // blue if selected
+                weight: 1
+            });
+        }
+    });
+
+}
+
+const demLayerGroup = L.layerGroup().addTo(map); // Clears and holds DEM previews
+const demRectangles = {}; // filename → rectangle
+
+function renderDEMPreviews(demList) {
+    demLayerGroup.clearLayers();
+    Object.keys(demRectangles).forEach(k => delete demRectangles[k]);
+
+    demList.forEach(dem => {
+        if (dem.bounds) {
+            const lat1 = Math.min(dem.bounds.min_lat, dem.bounds.max_lat);
+            const lat2 = Math.max(dem.bounds.min_lat, dem.bounds.max_lat);
+            const lon1 = Math.min(dem.bounds.min_lon, dem.bounds.max_lon);
+            const lon2 = Math.max(dem.bounds.min_lon, dem.bounds.max_lon);
+
+            const bounds = [[lat1, lon1], [lat2, lon2]];
+
+            const rect = L.rectangle(bounds, {
+                color: "#888888",       // gray
+                weight: 1,
+                fillOpacity: 0.2
+            }).bindTooltip(dem.filename, { permanent: false });
+
+            demLayerGroup.addLayer(rect);
+            demRectangles[dem.filename] = rect;
+        }
+    });
 }
