@@ -234,6 +234,11 @@ async function runMission() {
     if (!config) return alert("Mission config not found.");
 
     let payload = { type: mission };
+    const demDropdown = document.getElementById("demSelector");
+    const selectedDEM = demDropdown ? demDropdown.value : null;
+    if (selectedDEM) {
+        payload.dem = selectedDEM;
+    }
 
     if (config.geometry_type === "point") {
         if (!setpointMarker) return alert("Click on the map to set a target point.");
