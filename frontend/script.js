@@ -234,11 +234,33 @@ async function runMission() {
     if (!config) return alert("Mission config not found.");
 
     let payload = { type: mission };
+
     const demDropdown = document.getElementById("demSelector");
-    const selectedDEM = demDropdown ? demDropdown.value : null;
-    if (selectedDEM) {
+    const demUpload = document.getElementById("demUpload");
+
+    const selectedDEM = demDropdown?.value || "";
+    const uploadedFile = demUpload?.files?.[0];
+
+    if (uploadedFile) {
+        // Convert file to base64
+        const arrayBuffer = await uploadedFile.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const binaryString = Array.from(uint8Array).map(b => String.fromCharCode(b)).join('');
+        const base64Data = btoa(binaryString);
+
+        payload.dem_uploaded = base64Data;
+        payload.dem_filename = uploadedFile.name;
+    } else if (selectedDEM) {
         payload.dem = selectedDEM;
     }
+
+    demUpload.addEventListener("change", () => {
+        if (demUpload.files.length > 0) {
+            demDropdown.selectedIndex = 0; // Reset to "-- No DEM --"
+            highlightSelectedDEM(""); // Remove highlight
+        }
+    });
+
 
     if (config.geometry_type === "point") {
         if (!setpointMarker) return alert("Click on the map to set a target point.");
