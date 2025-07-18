@@ -166,6 +166,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (Date.now() - lastTelemetryTimestamp > 5000) {
         setHUDStale(true);
         console.log("No telemetry received in 5 seconds, marking HUD as stale.");
+        setDroneConnected(false);
     }
     }, 1000);
 });
@@ -322,6 +323,7 @@ function connectWebSocket() {
 
     ws.onopen = () => {
         appendLog("Drone connected.", "normal");
+        setDroneConnected(true);
     };      
 
     ws.onmessage = (event) => {
@@ -564,3 +566,74 @@ function renderDEMPreviews(demList) {
         }
     });
 }
+
+let holdTimer = null;
+const HOLD_DURATION = 2000;
+
+function holdStart(event, actionName, endpoint) {
+  const button = event.currentTarget;
+  if (button.disabled) return;
+
+  const label = button.querySelector('.label');
+  const progress = button.querySelector('.progress');
+
+  // Save original label
+  if (!button.dataset.holdLabel) {
+    button.dataset.holdLabel = label.textContent;
+  }
+
+  label.textContent = 'Hold...';
+  progress.style.transition = `width ${HOLD_DURATION}ms linear`;
+  progress.style.width = '100%';
+
+  holdTimer = setTimeout(() => {
+    sendEmergencyCommand(actionName, endpoint);
+    label.textContent = '✓';
+    progress.style.width = '0%';
+    setTimeout(() => {
+      label.textContent = button.dataset.holdLabel;
+    }, 1000);
+  }, HOLD_DURATION);
+}
+
+function holdEnd(event) {
+  clearTimeout(holdTimer);
+
+  const button = event.currentTarget;
+  const label = button.querySelector('.label');
+  const progress = button.querySelector('.progress');
+
+  if (button.dataset.holdLabel) {
+    label.textContent = button.dataset.holdLabel;
+  }
+
+  progress.style.transition = 'none';
+  progress.style.width = '0%';
+}
+
+function sendEmergencyCommand(actionName, endpoint) {
+  const url = `${apiHost}${endpoint}`;
+  console.log(`Sending ${actionName} to ${url}`);
+
+  fetch(url, { method: 'POST' })
+    .then(response => {
+      if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+      return response.text();
+    })
+    .then(data => {
+      console.log(`${actionName} sent:`, data);
+    })
+    .catch(err => {
+      console.error(`Failed to send ${actionName}:`, err);
+      alert(`Failed to send ${actionName}.`);
+    });
+}
+
+// Enable/disable emergency buttons based on drone connection
+function setDroneConnected(isConnected) {
+  const buttons = document.querySelectorAll('#emergencyButtons button');
+  buttons.forEach(btn => {
+    btn.disabled = !isConnected;
+  });
+}
+

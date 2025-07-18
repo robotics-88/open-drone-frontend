@@ -42,7 +42,31 @@
       </div>
 
     </div>
-  </div>  
+  </div>
+
+  <div id="emergencyButtons">
+    <button class="e-stop" disabled
+        onmousedown="holdStart(event, 'E-Stop', '/emergency/stop')" 
+        onmouseup="holdEnd(event)" 
+        onmouseleave="holdEnd(event)">
+      <span class="label">E-Stop</span>
+      <div class="progress"></div>
+    </button>
+    <button class="pause" disabled
+        onmousedown="holdStart(event, 'Pause', '/emergency/pause')" 
+        onmouseup="holdEnd(event)" 
+        onmouseleave="holdEnd(event)">
+      <span class="label">Pause</span>
+      <div class="progress"></div>
+    </button>
+    <button class="rtl" disabled
+        onmousedown="holdStart(event, 'RTL', '/emergency/rtl')" 
+        onmouseup="holdEnd(event)" 
+        onmouseleave="holdEnd(event)">
+      <span class="label">RTL</span>
+      <div class="progress"></div>
+    </button>
+  </div>
 
   <div id="topStatusBar">
     <span>

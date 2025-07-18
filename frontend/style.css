@@ -257,3 +257,44 @@ button:disabled {
     cursor: pointer;
 }
 
+#emergencyButtons {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 1003;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#emergencyButtons button {
+  position: relative;
+  overflow: hidden;
+  font-size: 16px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  color: white;
+}
+
+#emergencyButtons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.e-stop { background: #f44336; }
+.pause  { background: #ff9800; }
+.rtl    { background: #2196f3; }
+
+.progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: rgba(255,255,255,0.8);
+  width: 0%;
+  transition: none;
+}
