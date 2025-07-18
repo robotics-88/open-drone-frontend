@@ -13,8 +13,42 @@
 </head>
 
 <body>
-  <div id="missionOverlay">
+
+  <div id="topStatusBar">
+    <span>
+      <span class="material-icons" id="gpsSatellites">satellite_alt</span>
+      <span id="gpsCount">--</span>
+    </span>
+    <span>
+      <span class="material-icons" id="numCameras">camera_alt</span>
+      <span id="cameraCount">0</span>
+    </span>
+    <span>
+      <span class="material-icons" id="batteryIcon">battery_std</span>
+      <span id="batteryVolts">--V</span>
+    </span>
+    <span id="droneState" class="status-indicator">Status: --</span>
+    <span>
+      <span class="material-icons" id="heightAboveHome">height</span>
+      <span id="heightVal">-- m</span>
+    </span>
+    <span>
+      <span class="material-icons" id="distanceToHome">straighten</span>
+      <span id="distanceVal">-- m</span>
+    </span>
+    <span>
+      <span class="material-icons" id="speed">speed</span>
+      <span id="speedVal">-- m/s</span>
+    </span>
+  </div>  
+
+  <div id="controlBar">
+    <button id="settingsBtn" title="Settings">⚙️ Settings</button>
     <button id="toggleMissionBtn">🧰 Mission Center</button>
+    <button id="toggleVideoBtn">📹 Show Camera</button>
+  </div>
+
+  <div id="missionOverlay">
     <div id="missionPanel" style="display: none;">
       <select id="missionSelect">
         <option value="">-- Select Mission --</option>
@@ -68,41 +102,41 @@
     </button>
   </div>
 
-  <div id="topStatusBar">
-    <span>
-      <span class="material-icons" id="gpsSatellites">satellite_alt</span>
-      <span id="gpsCount">--</span>
-    </span>
-    <span>
-      <span class="material-icons" id="numCameras">camera_alt</span>
-      <span id="cameraCount">0</span>
-    </span>
-    <span>
-      <span class="material-icons" id="batteryIcon">battery_std</span>
-      <span id="batteryVolts">--V</span>
-    </span>
-    <span id="droneState" class="status-indicator">Status: --</span>
-    <span>
-      <span class="material-icons" id="heightAboveHome">height</span>
-      <span id="heightVal">-- m</span>
-    </span>
-    <span>
-      <span class="material-icons" id="distanceToHome">straighten</span>
-      <span id="distanceVal">-- m</span>
-    </span>
-    <span>
-      <span class="material-icons" id="speed">speed</span>
-      <span id="speedVal">-- m/s</span>
-    </span>
-  </div>  
-
-  <div id="map"></div>
-
   <div id="videoOverlay">
-    <button id="toggleVideoBtn">📹 Show Camera</button>
     <div id="videoContainer" style="display: none;">
       <iframe id="webrtcFrame" src="http://drone.local:8889/camera1" allow="autoplay"></iframe>
     </div>
+  </div>
+
+  <div id="map"></div>
+
+  <div id="settingsScreen" style="
+      display: none;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      z-index: 1000;
+      overflow-y: auto;
+      padding: 2rem;
+    ">
+    <h2>Drone Settings</h2>
+    <p id="settingsWarning" style="color: red;"></p>
+
+    <h3>Drone Info</h3>
+    <ul>
+      <li>Total Flight Hours: <span id="flightHours">--</span></li>
+      <li>Number of Logs: <span id="logCount">--</span></li>
+      <li>Drone ID: <span id="droneId">--</span></li>
+    </ul>
+
+    <h3>Pilot Info (Remote ID)</h3>
+    <label>Name: <input type="text" id="pilotName"></label><br><br>
+    <label>License #: <input type="text" id="pilotLicense"></label><br><br>
+
+    <button onclick="saveSettings()">Save</button>
+    <button onclick="closeSettings()">Close</button>
   </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
