@@ -1,6 +1,7 @@
 let apiHost;
 let ws;
 let lastTelemetryTimestamp = 0;
+let droneInFlight = false; // update this dynamically from telemetry
 
 function onHostChange() {
     const select = document.getElementById("hostSelect");
@@ -406,7 +407,10 @@ function updateHUD(data) {
     if (["READY","MANUAL_FLIGHT","MISSION","COMPLETE"].includes(data.status))      stateEl.classList.add("status-green");
     else if (["INITIALIZING","PREFLIGHT_CHECK","RTL_88","TAKING_OFF","LANDING"].includes(data.status)) stateEl.classList.add("status-yellow");
     else                                                       stateEl.classList.add("status-red");
-  
+
+    if (["RTL_88","MANUAL_FLIGHT","MISSION","TAKING_OFF", "LANDING"].includes(data.status)) droneInFlight = true;
+    else droneInFlight = false;
+
     // === Height / Distance / Speed
     document.getElementById("heightVal").textContent   = `${(data.height || 0).toFixed(1)} m`;
     document.getElementById("distanceVal").textContent = `${(data.distance || 0).toFixed(1)} m`;
@@ -635,5 +639,35 @@ function setDroneConnected(isConnected) {
   buttons.forEach(btn => {
     btn.disabled = !isConnected;
   });
+}
+
+document.getElementById('settingsBtn').onclick = () => {
+  if (droneInFlight) {
+    alert("Settings can only be viewed when the drone is grounded.");
+    return;
+  }
+  openSettings();
+};
+
+function openSettings() {
+  document.getElementById('settingsScreen').style.display = 'flex';
+  document.getElementById('flightHours').textContent = "12.4";  // Replace with real data
+  document.getElementById('logCount').textContent = "18";
+  document.getElementById('droneId').textContent = "DRN-00123";
+
+  document.getElementById('pilotName').value = localStorage.getItem("pilotName") || "";
+  document.getElementById('pilotLicense').value = localStorage.getItem("pilotLicense") || "";
+}
+
+function closeSettings() {
+  document.getElementById('settingsScreen').style.display = 'none';
+}
+
+function saveSettings() {
+  const name = document.getElementById('pilotName').value;
+  const license = document.getElementById('pilotLicense').value;
+  localStorage.setItem("pilotName", name);
+  localStorage.setItem("pilotLicense", license);
+  alert("Settings saved!");
 }
 

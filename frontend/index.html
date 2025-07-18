@@ -110,34 +110,38 @@
 
   <div id="map"></div>
 
-  <div id="settingsScreen" style="
-      display: none;
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      background: white;
-      z-index: 1000;
-      overflow-y: auto;
-      padding: 2rem;
-    ">
-    <h2>Drone Settings</h2>
-    <p id="settingsWarning" style="color: red;"></p>
+  <div id="settingsScreen">
+    <div class="settings-content">
+      <h2>Drone Settings</h2>
+      
+      <section class="settings-section">
+        <h3>Pilot Info <small>(Remote ID)</small></h3>
+        <label>
+          Name:
+          <input type="text" id="pilotName" />
+        </label>
+        <label>
+          License #:
+          <input type="text" id="pilotLicense" />
+        </label>
+      </section>
 
-    <h3>Drone Info</h3>
-    <ul>
-      <li>Total Flight Hours: <span id="flightHours">--</span></li>
-      <li>Number of Logs: <span id="logCount">--</span></li>
-      <li>Drone ID: <span id="droneId">--</span></li>
-    </ul>
+      <section class="settings-section">
+        <h3>Drone Info</h3>
+        <ul>
+          <li>Total Flight Hours: <span id="flightHours">--</span></li>
+          <li>Number of Logs: <span id="logCount">--</span></li>
+          <li>Drone ID: <span id="droneId">--</span></li>
+        </ul>
+      </section>
 
-    <h3>Pilot Info (Remote ID)</h3>
-    <label>Name: <input type="text" id="pilotName"></label><br><br>
-    <label>License #: <input type="text" id="pilotLicense"></label><br><br>
-
-    <button onclick="saveSettings()">Save</button>
-    <button onclick="closeSettings()">Close</button>
+      <div class="settings-actions">
+        <button onclick="saveSettings()">💾 Save</button>
+        <button onclick="closeSettings()">❌ Close</button>
+      </div>
+    </div>
   </div>
+
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
