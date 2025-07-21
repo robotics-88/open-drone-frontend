@@ -672,7 +672,7 @@ function saveSettings() {
   alert("Settings saved!");
 }
 
-let rpicIntervalId = null;
+let latestPosition = null;
 
 document.getElementById("rpicToggle").addEventListener("change", (e) => {
   const isRPIC = e.target.checked;
@@ -687,41 +687,51 @@ document.getElementById("rpicToggle").addEventListener("change", (e) => {
 
     statusText.textContent = "Sharing your location with the drone backend...";
 
-    rpicIntervalId = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const payload = {
-            uas_id: 123456,
-            operator_id: parseInt(localStorage.getItem("pilotLicense")) || 0,
-            operator_latitude: pos.coords.latitude,
-            operator_longitude: pos.coords.longitude,
-            operator_altitude_geo: pos.coords.altitude || 0,
-            timestamp: Math.floor(Date.now() / 1000),
-          };
+    rpicLocationWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        latestPosition = pos;
+      },
+      (err) => {
+        console.error("Location error:", err.message);
+        statusText.textContent = "Location sharing failed.";
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 10000,
+      }
+    );
 
-          fetch(`${apiHost}/remote_id`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }).catch((err) => console.error("Failed to send Remote ID:", err));
-        },
-        (err) => {
-          console.error("Location error:", err.message);
-          statusText.textContent = "Location sharing failed.";
-        },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 0,
-          timeout: 5000,
-        }
-      );
+    rpicIntervalId = setInterval(() => {
+      if (!latestPosition) return;
+
+      const pos = latestPosition;
+      const payload = {
+        uas_id: 123456,
+        operator_id: parseInt(localStorage.getItem("pilotLicense")) || 0,
+        operator_latitude: pos.coords.latitude,
+        operator_longitude: pos.coords.longitude,
+        operator_altitude_geo: pos.coords.altitude || 0,
+        timestamp: Math.floor(Date.now() / 1000),
+      };
+
+      fetch(`${apiHost}/remote_id`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch((err) => console.error("Failed to send Remote ID:", err));
     }, 1000); // 1Hz
   } else {
     statusText.textContent = "RPIC mode disabled.";
+    if (rpicLocationWatchId !== null) {
+      navigator.geolocation.clearWatch(rpicLocationWatchId);
+      rpicLocationWatchId = null;
+    }
     if (rpicIntervalId !== null) {
       clearInterval(rpicIntervalId);
       rpicIntervalId = null;
     }
+    latestPosition = null;
   }
 });
 
