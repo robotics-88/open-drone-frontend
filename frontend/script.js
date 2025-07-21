@@ -77,6 +77,7 @@ async function loadCapabilities() {
         }
 
         const caps = JSON.parse(data.capabilities);
+        window.latestCapabilities = caps;
         const missionArray = Array.isArray(caps.missions) ? caps.missions : Object.values(caps.missions);
 
         missionSelect.innerHTML = '<option value="">-- Select Mission --</option>';
@@ -276,6 +277,11 @@ async function runMission() {
         payload.polygon = latlngs;
     }
 
+    const lazBox = document.getElementById("saveLazCheckbox");
+    if (lazBox && lazBox.checked) {
+        payload.save_laz = true;
+    }
+
     try {
         appendLog(`Sending mission: ${mission}`, "normal");
     
@@ -438,13 +444,41 @@ async function renderMissionDetails(config) {
     container.innerHTML = "";
 
     if (!config) return;
-
     const isLocked = !config.available;
+
+    // DEM selection
+    renderDemSection(container);
+
+    // Save LAZ checkbox if lidar is available
+    if (window.latestCapabilities?.hardware?.lidar) {
+        console.log("hardware.lidar is true, showing LAZ checkbox")
+        const lazDiv = document.createElement("div");
+        lazDiv.style.marginTop = "12px";
+
+        const lazCheckbox = document.createElement("input");
+        lazCheckbox.type = "checkbox";
+        lazCheckbox.id = "saveLazCheckbox";
+        lazCheckbox.checked = true;
+
+        const lazLabel = document.createElement("label");
+        lazLabel.setAttribute("for", "saveLazCheckbox");
+        lazLabel.textContent = " Save LAZ point cloud during mission";
+
+        lazDiv.appendChild(lazCheckbox);
+        lazDiv.appendChild(lazLabel);
+        container.appendChild(lazDiv);
+    }
+    else {
+        console.log("hardware.lidar is false, not showing LAZ checkbox");
+    }
+
+    const runBtn = document.querySelector("button[onclick='runMission()']");
     if (!isLocked) {
-        renderDemSection(container);
+        runBtn.disabled = false;
         return;
     }
 
+    // Render locked mission requirements
     const required = Array.isArray(config.requires_activation) ? config.requires_activation : [];
 
     // Title
@@ -470,11 +504,7 @@ async function renderMissionDetails(config) {
     checkboxWrapper.appendChild(acceptLabel);
     container.appendChild(checkboxWrapper);
 
-    // DEM selection
-    renderDemSection(container);
-
     // Enable Run only if acceptBox is checked
-    const runBtn = document.querySelector("button[onclick='runMission()']");
     if (isLocked) {
         runBtn.disabled = true;
 
