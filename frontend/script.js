@@ -231,6 +231,9 @@ map.on("click", function (e) {
 });
 
 async function runMission() {
+    const runBtn = document.getElementById("runBtn");
+    const originalText = runBtn.textContent;
+
     const mission = missionSelect.value;
     if (!mission) return alert("Select a mission first.");
 
@@ -301,8 +304,15 @@ async function runMission() {
         } else {
           appendLog("Mission accepted.");
         }
+        runBtn.textContent = "✅ Sent!";
     } catch (err) {
         appendLog(`Mission send failed: ${err.message}`, "error");
+        runBtn.textContent = "❌ Failed";
+    } finally {
+        // ⏳ Reset to original after a brief delay
+        setTimeout(() => {
+            runBtn.textContent = originalText;
+        }, 1500);
     }
 }
 
@@ -471,7 +481,7 @@ async function renderMissionDetails(config) {
         console.log("hardware.lidar is false, not showing LAZ checkbox");
     }
 
-    const runBtn = document.querySelector("button[onclick='runMission()']");
+    const runBtn = document.getElementById("runBtn");
     if (!isLocked) {
         runBtn.disabled = false;
         return;
