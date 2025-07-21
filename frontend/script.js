@@ -2,6 +2,7 @@ let apiHost;
 let ws;
 let lastTelemetryTimestamp = 0;
 let droneInFlight = false; // update this dynamically from telemetry
+let rpicLocationWatchId = null;
 
 function onHostChange() {
     const select = document.getElementById("hostSelect");
@@ -670,4 +671,59 @@ function saveSettings() {
   localStorage.setItem("pilotLicense", license);
   alert("Settings saved!");
 }
+
+let rpicIntervalId = null;
+
+document.getElementById("rpicToggle").addEventListener("change", (e) => {
+  const isRPIC = e.target.checked;
+  const statusText = document.getElementById("rpicStatus");
+
+  if (isRPIC) {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      e.target.checked = false;
+      return;
+    }
+
+    statusText.textContent = "Sharing your location with the drone backend...";
+
+    rpicIntervalId = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const payload = {
+            uas_id: 123456,
+            operator_id: parseInt(localStorage.getItem("pilotLicense")) || 0,
+            operator_latitude: pos.coords.latitude,
+            operator_longitude: pos.coords.longitude,
+            operator_altitude_geo: pos.coords.altitude || 0,
+            timestamp: Math.floor(Date.now() / 1000),
+          };
+
+          fetch(`${apiHost}/remote_id`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }).catch((err) => console.error("Failed to send Remote ID:", err));
+        },
+        (err) => {
+          console.error("Location error:", err.message);
+          statusText.textContent = "Location sharing failed.";
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 5000,
+        }
+      );
+    }, 1000); // 1Hz
+  } else {
+    statusText.textContent = "RPIC mode disabled.";
+    if (rpicIntervalId !== null) {
+      clearInterval(rpicIntervalId);
+      rpicIntervalId = null;
+    }
+  }
+});
+
+
 
