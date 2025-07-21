@@ -165,14 +165,15 @@ button:disabled {
 }
 
 #missionDetails {
-  background: #fefefe;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 12px;
-  margin-top: 10px;
-  font-size: 0.95em;
-  line-height: 1.4;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background: #fefefe;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 0.95em;
+    line-height: 1.4;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    font-family: sans-serif;
 }
 
 #missionDetails h4 {
