@@ -451,7 +451,6 @@ async function renderMissionDetails(config) {
 
     // Save LAZ checkbox if lidar is available
     if (window.latestCapabilities?.hardware?.lidar) {
-        console.log("hardware.lidar is true, showing LAZ checkbox")
         const lazDiv = document.createElement("div");
         lazDiv.style.marginTop = "12px";
 
