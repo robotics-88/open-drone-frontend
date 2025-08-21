@@ -183,6 +183,7 @@ const droneMarker = L.marker([37.422, -122.084], { icon: DroneIcon }).addTo(map)
 
 let setpointMarker = null;
 let polygonLayer = null;
+let polylineLayer = null;
 let drawing = false;
 let followDrone = true;
 
@@ -190,7 +191,10 @@ const drawnItems = new L.FeatureGroup();
 map.addLayer(drawnItems);
 const drawControl = new L.Control.Draw({
     draw: {
-    polyline: false,
+    polyline: {
+      metric: true,          // show metric distances
+      shapeOptions: { weight: 3 }
+    },
     rectangle: false,
     circle: false,
     circlemarker: false,
@@ -212,6 +216,19 @@ map.on("draw:created", function (e) {
     if (polygonLayer) drawnItems.removeLayer(polygonLayer);
     polygonLayer = layer;
     drawnItems.addLayer(layer);
+    }
+
+    if (e.layerType === "polyline") {
+      if (polylineLayer) drawnItems.removeLayer(polylineLayer);
+      polylineLayer = layer;
+      drawnItems.addLayer(layer);
+
+      try {
+        const pts = layer.getLatLngs();
+        let meters = 0;
+        for (let i = 1; i < pts.length; i++) meters += pts[i - 1].distanceTo(pts[i]);
+        appendLog(`Line length: ${meters.toFixed(1)} m`);
+      } catch (_) {}
     }
 });
 
@@ -278,6 +295,11 @@ async function runMission() {
         if (!polygonLayer) return alert("Draw a polygon first.");
         const latlngs = polygonLayer.getLatLngs()[0].map((p) => ({ lat: p.lat, lon: p.lng }));
         payload.polygon = latlngs;
+    }
+    else if (config.geometry_type === "polyline") {
+      if (!polylineLayer) return alert("Draw a line first.");
+      const latlngs = polylineLayer.getLatLngs().map(p => ({ lat: p.lat, lon: p.lng }));
+      payload.polyline = latlngs;
     }
 
     const lazBox = document.getElementById("saveLazCheckbox");
