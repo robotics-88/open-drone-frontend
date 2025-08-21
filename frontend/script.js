@@ -52,6 +52,55 @@ function setHUDStale(isStale) {
   });
 }
 
+// === Colormaps ===
+// Parula-like stops (low→high): deep blue → cyan/green → yellow
+const PARULA_HEX = [
+  "#352A87",
+  "#2B52A3",
+  "#1E74B3",
+  "#1598B7",
+  "#25BDA8",
+  "#6DC174",
+  "#B6BE3F",
+  "#F9BD07"
+];
+
+// (Optional alternative: very clear and colorblind-friendly)
+const VIRIDIS_HEX = ["#440154","#414487","#2A788E","#22A884","#7AD151","#FDE725"];
+
+// Settings
+const DEPTH_COLORMAP = VIRIDIS_HEX; // swap to VIRIDIS_HEX if you prefer
+const DEPTH_COLORMAP_INVERT = true; // true = deeper → bluer; false = deeper → yellower
+const MIN_DEPTH = 0;
+const MAX_DEPTH = 50; // adjust to your ops window
+
+// Utils
+function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+
+function hexToRgb(h) {
+  const n = parseInt(h.slice(1), 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function rgbToHex({r,g,b}) {
+  const n = (r<<16) | (g<<8) | b;
+  return "#" + n.toString(16).padStart(6, "0");
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function sampleColormap(stops, t) {
+  const n = stops.length - 1;
+  const x = clamp01(t) * n;
+  const i = Math.floor(x);
+  const f = x - i;
+  const c0 = hexToRgb(stops[i]);
+  const c1 = hexToRgb(stops[Math.min(i + 1, n)]);
+  return rgbToHex({
+    r: Math.round(lerp(c0.r, c1.r, f)),
+    g: Math.round(lerp(c0.g, c1.g, f)),
+    b: Math.round(lerp(c0.b, c1.b, f))
+  });
+}
+
 // === Leaflet map setup ===
 const map = L.map("map").setView([37.422, -122.084], 17);
 L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
@@ -174,10 +223,12 @@ window.addEventListener("DOMContentLoaded", () => {
     }, 1000);
 });
 
+// Replace your current DroneIcon with this:
 const DroneIcon = L.divIcon({
-    className: "",
-    iconSize: [40, 40],
-    html: '<img id="drone-arrow" src="arrow-bluev2.png" class="rotating-drone" />',
+  className: "drone-icon",
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+  html: '<span id="drone-arrow" class="material-icons drone-arrow">navigation</span>',
 });
 const droneMarker = L.marker([37.422, -122.084], { icon: DroneIcon }).addTo(map);
 
@@ -186,6 +237,23 @@ let polygonLayer = null;
 let polylineLayer = null;
 let drawing = false;
 let followDrone = true;
+
+// Depth lookup (meters) → color. Tweak maxDepth for your ops window.
+function depthToColor(depthMeters) {
+  if (!Number.isFinite(depthMeters)) return "#2196F3";
+  const t = clamp01((depthMeters - MIN_DEPTH) / Math.max(1e-6, (MAX_DEPTH - MIN_DEPTH)));
+  const u = DEPTH_COLORMAP_INVERT ? (1 - t) : t;
+  return sampleColormap(DEPTH_COLORMAP, u);
+}
+
+// Robustly extract a depth value from telemetry
+function getDepthMeters(data) {
+  if (Number.isFinite(data.depth))   return data.depth;       // preferred
+  if (Number.isFinite(data.depth_m)) return data.depth_m;     // alt key
+  // Fallback: if height goes negative below water, treat depth = -height
+  if (Number.isFinite(data.height) && data.height < 0) return -data.height;
+  return 0;
+}
 
 const drawnItems = new L.FeatureGroup();
 map.addLayer(drawnItems);
@@ -346,15 +414,95 @@ function recenter() {
     }
 }
 
+// Build CSS gradient so TOP corresponds to MIN_DEPTH (0)
+function colormapGradientCss(stops, invert = false) {
+  const arr = invert ? [...stops].reverse() : stops; // invert = deeper→bluer, etc.
+  const pct = arr.map((c, i) => `${c} ${(100 * i / (arr.length - 1)).toFixed(1)}%`);
+  // Top is MIN; gradient flows downward with increasing depth
+  return `linear-gradient(to bottom, ${pct.join(",")})`;
+}
+
+// === Vertical depth legend (topleft, under draw tools) ===
+const DepthLegend = L.control({ position: 'topleft' });
+DepthLegend.onAdd = function () {
+  const wrap = L.DomUtil.create('div', 'depth-legend-vertical');
+
+  // Leaflet control look
+  wrap.style.background = 'rgba(255,255,255,0.92)';
+  wrap.style.padding = '8px';
+  wrap.style.borderRadius = '8px';
+  wrap.style.boxShadow = '0 1px 3px rgba(0,0,0,0.25)';
+  wrap.style.marginTop = '6px';
+  wrap.style.userSelect = 'none';
+  wrap.style.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+
+  // Title
+  const title = document.createElement('div');
+  title.textContent = 'Depth (m)';
+  title.style.fontWeight = '600';
+  title.style.marginBottom = '6px';
+  wrap.appendChild(title);
+
+  // Layout row: [bar][labels]
+  const row = document.createElement('div');
+  row.style.display = 'flex';
+  row.style.alignItems = 'stretch';
+  row.style.gap = '8px';
+  wrap.appendChild(row);
+
+  const BAR_H = 160; // px
+
+  // Color bar
+  const bar = document.createElement('div');
+  bar.style.width = '16px';
+  bar.style.height = BAR_H + 'px';
+  bar.style.borderRadius = '6px';
+  bar.style.background = colormapGradientCss(DEPTH_COLORMAP, DEPTH_COLORMAP_INVERT);
+  bar.style.outline = '1px solid rgba(0,0,0,0.15)';
+  row.appendChild(bar);
+
+  // Labels column (0 at top, MAX at bottom)
+  const labels = document.createElement('div');
+  labels.style.height = BAR_H + 'px';
+  labels.style.display = 'flex';
+  labels.style.flexDirection = 'column';
+  labels.style.justifyContent = 'space-between';
+  labels.style.alignItems = 'flex-start';
+  row.appendChild(labels);
+
+  const top = document.createElement('div');
+  top.textContent = `${MIN_DEPTH}`;
+  const mid = document.createElement('div');
+  mid.textContent = `${((MIN_DEPTH + MAX_DEPTH) / 2) | 0}`;
+  const bot = document.createElement('div');
+  bot.textContent = `${MAX_DEPTH}`;
+
+  [top, mid, bot].forEach(el => {
+    el.style.textShadow = '0 1px 0 rgba(255,255,255,0.6)';
+  });
+
+  labels.appendChild(top);
+  labels.appendChild(mid);
+  labels.appendChild(bot);
+
+  // Prevent map drag on legend interactions
+  L.DomEvent.disableClickPropagation(wrap);
+  return wrap;
+};
+DepthLegend.addTo(map);
+
 function updateDroneMarker(data) {
-    droneMarker.setLatLng([data.lat, data.lon]);
-    if (followDrone) {
-        map.panTo([data.lat, data.lon]);
-    }
-    const arrowImg = document.getElementById("drone-arrow");
-    if (arrowImg) {
-        arrowImg.style.transform = `rotate(${data.heading}deg)`;
-    }
+  droneMarker.setLatLng([data.lat, data.lon]);
+  if (followDrone) map.panTo([data.lat, data.lon]);
+
+  const arrowEl = document.getElementById("drone-arrow");
+  if (arrowEl) {
+    arrowEl.style.transform = `rotate(${data.heading}deg)`;
+
+    const depth = getDepthMeters(data);
+    arrowEl.style.color = depthToColor(depth);
+    arrowEl.title = `Depth: ${depth.toFixed(1)} m`;
+  }
 }
 
 function connectWebSocket() {
