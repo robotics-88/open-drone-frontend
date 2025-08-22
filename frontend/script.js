@@ -72,7 +72,7 @@ const VIRIDIS_HEX = ["#440154","#414487","#2A788E","#22A884","#7AD151","#FDE725"
 const DEPTH_COLORMAP = VIRIDIS_HEX; // swap to VIRIDIS_HEX if you prefer
 const DEPTH_COLORMAP_INVERT = true; // true = deeper → bluer; false = deeper → yellower
 const MIN_DEPTH = 0;
-const MAX_DEPTH = 50; // adjust to your ops window
+const MAX_DEPTH = 1000; // adjust to your ops window
 
 // Utils
 function clamp01(x) { return Math.max(0, Math.min(1, x)); }
@@ -395,6 +395,7 @@ async function runMission() {
           appendLog("Mission accepted.");
         }
         runBtn.textContent = "✅ Sent!";
+        missionActive = true;
     } catch (err) {
         appendLog(`Mission send failed: ${err.message}`, "error");
         runBtn.textContent = "❌ Failed";
@@ -502,6 +503,34 @@ function updateDroneMarker(data) {
     const depth = getDepthMeters(data);
     arrowEl.style.color = depthToColor(depth);
     arrowEl.title = `Depth: ${depth.toFixed(1)} m`;
+  }
+  maybeAppendPathPoint(data.lat, data.lon);
+}
+
+// --- Mission path tracking ---
+let missionActive = false;
+let missionPathPts = [];
+const PATH_MIN_DIST_M = 1.5; // ignore tiny jitters
+
+// Red mission track polyline
+const missionPathLine = L.polyline([], {
+  color: '#FF1744', // vivid red
+  weight: 3,
+  opacity: 0.95
+}).addTo(map);
+
+function clearMissionPath() {
+  missionPathPts = [];
+  missionPathLine.setLatLngs([]);
+}
+
+function maybeAppendPathPoint(lat, lon) {
+  if (!missionActive) return;
+  const ll = L.latLng(lat, lon);
+  const last = missionPathPts[missionPathPts.length - 1];
+  if (!last || last.distanceTo(ll) >= PATH_MIN_DIST_M) {
+    missionPathPts.push(ll);
+    missionPathLine.addLatLng(ll);
   }
 }
 
