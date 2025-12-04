@@ -407,8 +407,6 @@ function connectWebSocket() {
         appendLog("Drone connection error.", "error");
     };
 }
-// State to track the current camera (1 or 2)
-let activeCameraId = 1;
 
 // 1. Logic for the "Show/Hide" button
 document.getElementById("toggleVideoBtn").addEventListener("click", () => {
@@ -430,19 +428,20 @@ document.getElementById("toggleVideoBtn").addEventListener("click", () => {
     }
 });
 
-// 2. Logic for the "Switch Camera" button
+let activeCameraId = 1;
+const totalCameras = 3; // Easy to change later if you add a 4th
+
 document.getElementById("switchCameraBtn").addEventListener("click", () => {
     const iframe = document.getElementById("webrtcFrame");
     const container = document.getElementById("videoContainer");
     
-    // Toggle the ID between 1 and 2
-    activeCameraId = (activeCameraId === 1) ? 2 : 1;
+    // Cycle the ID: (1 -> 2), (2 -> 3), (3 -> 1)
+    activeCameraId = (activeCameraId % totalCameras) + 1;
 
-    // Optional: Update button text to show which camera is selected
-    // document.getElementById("switchCameraBtn").textContent = `🔄 Switch (Current: ${activeCameraId})`;
+    // Optional debug log
+    console.log(`Switched to Camera ${activeCameraId}`);
 
-    // If the video is currently visible, update the source immediately.
-    // If it is hidden, we do nothing (the new ID will be used next time 'Show' is clicked).
+    // Update the stream immediately if the video is currently open
     if (container.style.display !== "none") {
         iframe.src = `http://drone.local:8889/camera${activeCameraId}`;
     }
