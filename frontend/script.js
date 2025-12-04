@@ -407,7 +407,10 @@ function connectWebSocket() {
         appendLog("Drone connection error.", "error");
     };
 }
+// State to track the current camera (1 or 2)
+let activeCameraId = 1;
 
+// 1. Logic for the "Show/Hide" button
 document.getElementById("toggleVideoBtn").addEventListener("click", () => {
     const container = document.getElementById("videoContainer");
     const iframe = document.getElementById("webrtcFrame");
@@ -416,13 +419,32 @@ document.getElementById("toggleVideoBtn").addEventListener("click", () => {
     const isHidden = container.style.display === "none";
 
     if (isHidden) {
-    container.style.display = "block";
-    iframe.src = `http://drone.local:8889/camera1`; // reconnect
-    btn.textContent = "📹 Hide Camera";
+        container.style.display = "block";
+        // Use the activeCameraId variable
+        iframe.src = `http://drone.local:8889/camera${activeCameraId}`;
+        btn.textContent = "📹 Hide Camera";
     } else {
-    container.style.display = "none";
-    iframe.src = ""; // disconnect
-    btn.textContent = "📹 Show Camera";
+        container.style.display = "none";
+        iframe.src = ""; // disconnect stream to save bandwidth
+        btn.textContent = "📹 Show Camera";
+    }
+});
+
+// 2. Logic for the "Switch Camera" button
+document.getElementById("switchCameraBtn").addEventListener("click", () => {
+    const iframe = document.getElementById("webrtcFrame");
+    const container = document.getElementById("videoContainer");
+    
+    // Toggle the ID between 1 and 2
+    activeCameraId = (activeCameraId === 1) ? 2 : 1;
+
+    // Optional: Update button text to show which camera is selected
+    // document.getElementById("switchCameraBtn").textContent = `🔄 Switch (Current: ${activeCameraId})`;
+
+    // If the video is currently visible, update the source immediately.
+    // If it is hidden, we do nothing (the new ID will be used next time 'Show' is clicked).
+    if (container.style.display !== "none") {
+        iframe.src = `http://drone.local:8889/camera${activeCameraId}`;
     }
 });
 
