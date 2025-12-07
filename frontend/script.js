@@ -430,69 +430,72 @@ function connectWebSocket() {
 
 // Make sure this matches the real state on page load if possible
 let isRecording = false;
+// Wait for the page to load completely
+window.addEventListener("DOMContentLoaded", () => {
+  const recordBtn = document.getElementById("recordBtn");
 
-document.getElementById("recordBtn").addEventListener("click", async () => {
-  const btn = document.getElementById("recordBtn");
-  const label = document.getElementById("recordBtnText");
-  const originalLabel = label.textContent;
-
-  // 1. Set UI to "Waiting" state immediately
-  // This gives feedback that we are waiting for the drone
-  btn.disabled = true;
-  label.textContent = "Waiting...";
-  btn.style.opacity = "0.7";
-
-  // The state we WANT to achieve
-  const targetState = !isRecording;
-
-  try {
-    // 2. Send the command
-    const res = await fetch(`${apiHost}/record`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ record: targetState }),
-    });
-
-    if (!res.ok) throw new Error(`Network error: ${res.status}`);
-
-    // 3. Parse the specific JSON response from the drone
-    const data = await res.json();
-
-    // 4. CHECK CONFIRMATION:
-    // We only update the UI if the drone explicitly says "success"
-    // or confirms the new state in its response body.
-    if (data.success || data.recording === targetState) {
-      // Confirming local state matches the drone's confirmed state
-      isRecording = targetState;
-
-      if (isRecording) {
-        label.textContent = "Stop Rec";
-        btn.classList.add("recording-active");
-        appendLog(
-          `✅ Drone confirmed. Recording started with cameras: ${data.message}`,
-          "normal"
-        );
-      } else {
-        label.textContent = "Rec";
-        btn.classList.remove("recording-active");
-        appendLog("✅ Drone confirmed: Recording stopped", "normal");
-      }
-    } else {
-      // The web request worked, but the drone said "No"
-      // e.g., { success: false, message: "No SD Card" }
-      throw new Error(data.message || "Drone rejected video recording command");
-    }
-  } catch (err) {
-    console.error(err);
-    appendLog(`❌ Recording Failed: ${err.message}`, "error");
-
-    // 5. Revert UI to the previous state (do not toggle)
-    label.textContent = isRecording ? "Stop Rec" : "Rec";
-  } finally {
-    // 6. Always re-enable the button
-    btn.disabled = false;
-    btn.style.opacity = "1.0";
+  // Safety check: ensure button actually exists
+  if (!recordBtn) {
+    console.error("❌ Could not find element with id 'recordBtn'");
+    return;
   }
+
+  let isRecording = false;
+
+  recordBtn.addEventListener("click", async () => {
+    const label = document.getElementById("recordBtnText");
+
+    console.log("Button clicked!"); // Debug log to prove it's connected
+
+    // 1. Set UI to "Waiting" state
+    recordBtn.disabled = true;
+    label.textContent = "Waiting...";
+    recordBtn.style.opacity = "0.7";
+
+    const targetState = !isRecording;
+
+    try {
+      console.log(`Sending request to: ${apiHost}/record`); // Debug log for API URL
+
+      // 2. Send the command
+      const res = await fetch(`${apiHost}/record`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ record: targetState }),
+      });
+
+      if (!res.ok) throw new Error(`Network error: ${res.status}`);
+
+      const data = await res.json();
+      console.log("Drone response:", data); // Debug log for response
+
+      // 3. Confirm success
+      if (data.success || data.recording === targetState) {
+        isRecording = targetState;
+
+        if (isRecording) {
+          label.textContent = "Stop Rec";
+          recordBtn.classList.add("recording-active");
+          appendLog("✅ Drone confirmed: Recording started", "normal");
+        } else {
+          label.textContent = "Rec";
+          recordBtn.classList.remove("recording-active");
+          appendLog("✅ Drone confirmed: Recording stopped", "normal");
+        }
+      } else {
+        throw new Error(data.message || "Drone rejected command");
+      }
+    } catch (err) {
+      console.error(err);
+      appendLog(`❌ Recording Failed: ${err.message}`, "error");
+
+      // Revert UI on failure
+      label.textContent = isRecording ? "Stop Rec" : "Rec";
+    } finally {
+      recordBtn.disabled = false;
+      recordBtn.style.opacity = "1.0";
+    }
+  });
 });
 
 // 1. Logic for the "Show/Hide" button
