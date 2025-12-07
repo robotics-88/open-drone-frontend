@@ -1,161 +1,184 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drone Mission Control</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Drone Mission Control</title>
-  <link rel="icon" type="image/png" href="favicon.png" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-</head>
-
-<body>
-
-  <div id="topStatusBar">
-    <span>
-      <span class="material-icons" id="gpsSatellites">satellite_alt</span>
-      <span id="gpsCount">--</span>
-    </span>
-    <span>
-      <span class="material-icons" id="numCameras">camera_alt</span>
-      <span id="cameraCount">0</span>
-    </span>
-    <span>
-      <span class="material-icons" id="batteryIcon">battery_std</span>
-      <span id="batteryVolts">--V</span>
-    </span>
-    <span id="droneState" class="status-indicator">Status: --</span>
-    <span>
-      <span class="material-icons" id="heightAboveHome">height</span>
-      <span id="heightVal">-- m</span>
-    </span>
-    <span>
-      <span class="material-icons" id="distanceToHome">straighten</span>
-      <span id="distanceVal">-- m</span>
-    </span>
-    <span>
-      <span class="material-icons" id="speed">speed</span>
-      <span id="speedVal">-- m/s</span>
-    </span>
-  </div>  
-
-  <div id="controlBar">
-    <button id="settingsBtn" title="Settings">⚙️ Settings</button>
-    <button id="toggleMissionBtn">🧰 Mission Center</button>
-    <button id="toggleVideoBtn">📹 Show Camera</button>
-  </div>
-
-  <div id="missionOverlay">
-    <div id="missionPanel" style="display: none;">
-      <select id="missionSelect">
-        <option value="">-- Select Mission --</option>
-      </select>
-  
-      <select id="hostSelect" onchange="onHostChange()">
-        <option value="localhost:8080">localhost</option>
-        <option value="drone.local:8080">drone.local</option>
-        <option value="custom">Custom...</option>
-      </select>
-      <input type="text" id="customHost" placeholder="Enter IP or hostname" style="display:none;" oninput="onCustomHostInput()" />
-
-      <button onclick="runMission()" id="runBtn">Run</button>
-      <button onclick="recenter()">Recenter</button>
-
-      <div id="missionDetails" class="mission-details"></div>
-
-      <div id="logPanel">
-        <div id="logContent"></div>
-      </div>
-
-      <div id="perceptionModuleList">
-        <h4>Perception Modules</h4>
-        <div id="perceptionModules"></div>
-      </div>
-
+  <body>
+    <div id="topStatusBar">
+      <span>
+        <span class="material-icons" id="gpsSatellites">satellite_alt</span>
+        <span id="gpsCount">--</span>
+      </span>
+      <span>
+        <span class="material-icons" id="numCameras">camera_alt</span>
+        <span id="cameraCount">0</span>
+      </span>
+      <span>
+        <span class="material-icons" id="batteryIcon">battery_std</span>
+        <span id="batteryVolts">--V</span>
+      </span>
+      <span id="droneState" class="status-indicator">Status: --</span>
+      <span>
+        <span class="material-icons" id="heightAboveHome">height</span>
+        <span id="heightVal">-- m</span>
+      </span>
+      <span>
+        <span class="material-icons" id="distanceToHome">straighten</span>
+        <span id="distanceVal">-- m</span>
+      </span>
+      <span>
+        <span class="material-icons" id="speed">speed</span>
+        <span id="speedVal">-- m/s</span>
+      </span>
     </div>
-  </div>
 
-  <div id="emergencyButtons">
-    <button class="e-stop" disabled
-        onmousedown="holdStart(event, 'E-Stop', '/emergency/stop')" 
-        onmouseup="holdEnd(event)" 
-        onmouseleave="holdEnd(event)">
-      <span class="label">Land</span>
-      <div class="progress"></div>
-    </button>
-    <button class="pause" disabled
-        onmousedown="holdStart(event, 'Pause', '/emergency/pause')" 
-        onmouseup="holdEnd(event)" 
-        onmouseleave="holdEnd(event)">
-      <span class="label">Pause</span>
-      <div class="progress"></div>
-    </button>
-    <button class="rtl" disabled
-        onmousedown="holdStart(event, 'RTL', '/emergency/rtl')" 
-        onmouseup="holdEnd(event)" 
-        onmouseleave="holdEnd(event)">
-      <span class="label">RTL</span>
-      <div class="progress"></div>
-    </button>
-  </div>
-
-  <div id="videoOverlay">
-    <div id="videoContainer" style="display: none;">
-    <button id="switchCameraBtn">🔄 Switch Camera</button>
-      <iframe id="webrtcFrame" src="http://drone.local:8889/camera1" allow="autoplay"></iframe>
+    <div id="controlBar">
+      <button id="settingsBtn" title="Settings">⚙️ Settings</button>
+      <button id="toggleMissionBtn">🧰 Mission Center</button>
+      <button id="toggleVideoBtn">📹 Show Camera</button>
     </div>
-  </div>
 
-  <div id="map"></div>
+    <div id="missionOverlay">
+      <div id="missionPanel" style="display: none">
+        <select id="missionSelect">
+          <option value="">-- Select Mission --</option>
+        </select>
 
-  <div id="settingsScreen">
-    <div class="settings-content">
-      <h2>Drone Settings</h2>
-      
-      <section class="settings-section">
-        <h3>Pilot Info <small>(Remote ID)</small></h3>
-        <label>
-          Name:
-          <input type="text" id="pilotName" />
-        </label>
-        <label>
-          License #:
-          <input type="text" id="pilotLicense" />
-        </label>
-      </section>
-    
-      <section class="settings-section">
-        <h3>Remote Pilot in Control</h3>
-        <label>
-          <input type="checkbox" id="rpicToggle" />
-          I am the Remote Pilot in Control (RPIC) for this drone
-        </label>
-        <div id="rpicStatus" style="margin-top: 8px; font-size: 14px; color: #555;"></div>
-      </section>
+        <select id="hostSelect" onchange="onHostChange()">
+          <option value="localhost:8080">localhost</option>
+          <option value="drone.local:8080">drone.local</option>
+          <option value="custom">Custom...</option>
+        </select>
+        <input
+          type="text"
+          id="customHost"
+          placeholder="Enter IP or hostname"
+          style="display: none"
+          oninput="onCustomHostInput()"
+        />
 
-      <section class="settings-section">
-        <h3>Drone Info</h3>
-        <ul>
-          <li>Total Flight Hours: <span id="flightHours">--</span></li>
-          <li>Number of Logs: <span id="logCount">--</span></li>
-          <li>Drone ID: <span id="droneId">--</span></li>
-        </ul>
-      </section>
+        <button onclick="runMission()" id="runBtn">Run</button>
+        <button onclick="recenter()">Recenter</button>
 
-      <div class="settings-actions">
-        <button onclick="saveSettings()">💾 Save</button>
-        <button onclick="closeSettings()">❌ Close</button>
+        <div id="missionDetails" class="mission-details"></div>
+
+        <div id="logPanel">
+          <div id="logContent"></div>
+        </div>
+
+        <div id="perceptionModuleList">
+          <h4>Perception Modules</h4>
+          <div id="perceptionModules"></div>
+        </div>
       </div>
     </div>
-  </div>
 
+    <div id="emergencyButtons">
+      <button
+        class="e-stop"
+        disabled
+        onmousedown="holdStart(event, 'E-Stop', '/emergency/stop')"
+        onmouseup="holdEnd(event)"
+        onmouseleave="holdEnd(event)"
+      >
+        <span class="label">Land</span>
+        <div class="progress"></div>
+      </button>
+      <button
+        class="pause"
+        disabled
+        onmousedown="holdStart(event, 'Pause', '/emergency/pause')"
+        onmouseup="holdEnd(event)"
+        onmouseleave="holdEnd(event)"
+      >
+        <span class="label">Pause</span>
+        <div class="progress"></div>
+      </button>
+      <button
+        class="rtl"
+        disabled
+        onmousedown="holdStart(event, 'RTL', '/emergency/rtl')"
+        onmouseup="holdEnd(event)"
+        onmouseleave="holdEnd(event)"
+      >
+        <span class="label">RTL</span>
+        <div class="progress"></div>
+      </button>
+    </div>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
-  <script src="script.js"></script>
-</body>
+    <div id="videoOverlay">
+      <div id="videoContainer" style="display: none">
+        <button id="switchCameraBtn">🔄 Switch Camera</button>
+        <iframe
+          id="webrtcFrame"
+          src="http://drone.local:8889/camera1"
+          allow="autoplay"
+        ></iframe>
+      </div>
+    </div>
 
+    <div id="map"></div>
+
+    <div id="settingsScreen">
+      <div class="settings-content">
+        <h2>Drone Settings</h2>
+
+        <section class="settings-section">
+          <h3>Pilot Info <small>(Remote ID)</small></h3>
+          <label>
+            Name:
+            <input type="text" id="pilotName" />
+          </label>
+          <label>
+            License #:
+            <input type="text" id="pilotLicense" />
+          </label>
+        </section>
+
+        <section class="settings-section">
+          <h3>Remote Pilot in Control</h3>
+          <label>
+            <input type="checkbox" id="rpicToggle" />
+            I am the Remote Pilot in Control (RPIC) for this drone
+          </label>
+          <div
+            id="rpicStatus"
+            style="margin-top: 8px; font-size: 14px; color: #555"
+          ></div>
+        </section>
+
+        <section class="settings-section">
+          <h3>Drone Info</h3>
+          <ul>
+            <li>Total Flight Hours: <span id="flightHours">--</span></li>
+            <li>Number of Logs: <span id="logCount">--</span></li>
+            <li>Drone ID: <span id="droneId">--</span></li>
+          </ul>
+        </section>
+
+        <div class="settings-actions">
+          <button onclick="saveSettings()">💾 Save</button>
+          <button onclick="closeSettings()">❌ Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+    <script src="script.js"></script>
+  </body>
 </html>
