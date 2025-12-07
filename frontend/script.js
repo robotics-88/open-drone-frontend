@@ -428,6 +428,73 @@ function connectWebSocket() {
   };
 }
 
+// Make sure this matches the real state on page load if possible
+let isRecording = false;
+
+document.getElementById("recordBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("recordBtn");
+  const label = document.getElementById("recordBtnText");
+  const originalLabel = label.textContent;
+
+  // 1. Set UI to "Waiting" state immediately
+  // This gives feedback that we are waiting for the drone
+  btn.disabled = true;
+  label.textContent = "Waiting...";
+  btn.style.opacity = "0.7";
+
+  // The state we WANT to achieve
+  const targetState = !isRecording;
+
+  try {
+    // 2. Send the command
+    const res = await fetch(`${apiHost}/record`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ record: targetState }),
+    });
+
+    if (!res.ok) throw new Error(`Network error: ${res.status}`);
+
+    // 3. Parse the specific JSON response from the drone
+    const data = await res.json();
+
+    // 4. CHECK CONFIRMATION:
+    // We only update the UI if the drone explicitly says "success"
+    // or confirms the new state in its response body.
+    if (data.success || data.recording === targetState) {
+      // Confirming local state matches the drone's confirmed state
+      isRecording = targetState;
+
+      if (isRecording) {
+        label.textContent = "Stop Rec";
+        btn.classList.add("recording-active");
+        appendLog(
+          `✅ Drone confirmed. Recording started with cameras: ${data.message}`,
+          "normal"
+        );
+      } else {
+        label.textContent = "Rec";
+        btn.classList.remove("recording-active");
+        appendLog("✅ Drone confirmed: Recording stopped", "normal");
+      }
+    } else {
+      // The web request worked, but the drone said "No"
+      // e.g., { success: false, message: "No SD Card" }
+      throw new Error(data.message || "Drone rejected video recording command");
+    }
+  } catch (err) {
+    console.error(err);
+    appendLog(`❌ Recording Failed: ${err.message}`, "error");
+
+    // 5. Revert UI to the previous state (do not toggle)
+    label.textContent = isRecording ? "Stop Rec" : "Rec";
+  } finally {
+    // 6. Always re-enable the button
+    btn.disabled = false;
+    btn.style.opacity = "1.0";
+  }
+});
+
 // 1. Logic for the "Show/Hide" button
 document.getElementById("toggleVideoBtn").addEventListener("click", () => {
   const container = document.getElementById("videoContainer");

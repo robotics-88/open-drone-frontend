@@ -458,3 +458,25 @@ button:disabled {
   background-color: #f44336;
   color: white;
 }
+
+/* Active Recording State */
+.recording-active {
+  background-color: #e74c3c !important;
+  /* Red */
+  color: white !important;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+  }
+}
